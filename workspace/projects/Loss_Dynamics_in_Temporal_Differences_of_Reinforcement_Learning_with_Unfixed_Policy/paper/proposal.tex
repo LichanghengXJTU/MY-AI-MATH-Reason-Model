@@ -1,0 +1,66 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=1cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{graphicx}
+
+\title{Proposal: Loss Dynamics in Temporal-Difference Reinforcement Learning with Unfixed Policy}
+\author{Enhui Li}
+
+\begin{document}
+\maketitle
+
+\section*{Research Goal}
+
+Temporal-difference (TD) learning underpins many modern reinforcement learning (RL) algorithms, from classical TD($\lambda$) and Q-learning to deep actor--critic methods~\citep{suttonbarto2018}. Recent dynamical mean-field theory (DMFT) work has provided a detailed, typical-case characterization of TD loss dynamics under fixed policies in high-dimensional linear settings~\citep{bordelon2023loss}, but the analysis of unfixed policy is still a work to finish. 
+
+In this project, we aim to systematically investigate \textbf{how moving from fixed-policy evaluation to unfixed-policy control}---in particular, entering the ``\textbf{deadly triad}'' regime of function \textbf{approximation, bootstrapping, and off-policy} data~\citep{tsitsiklis1997analysis,vanhasselt2018deep}---changes the TD loss dynamics described by DMFT, and to \textbf{build a high-dimensional, mean-field framework that simultaneously captures policy evaluation and (slow) policy improvement}.
+
+\section*{Related Work}
+
+From Bordelon et al.'s work on TD loss dynamics under fixed policies~\citep{bordelon2023loss}, I learn that even in the simplest setting of linear TD(0) with a fixed policy, the interaction between semi-gradient noise, temporal correlations along Markov trajectories, and feature structure produces rich phenomena such as extended error plateaus and non-trivial dependence on learning rate and discount factor. Their DMFT formalism tracks the typical evolution of the weight covariance and yields closed-form learning curves for the mean-squared value error. This provides me with a powerful baseline: a well-understood fixed-policy TD theory against which we can carefully introduce controlled deviations, in particular the second kind of non-stationarity arising from policy updates. My work is an supplement to part of the question mentioned by this paper's discussion: "\textbf{we only considered the setting of policy evaluation with a fixed policy}". Also to mention, I use the definition of first and second non-stationary of this paper. First non-stationarity refers to the state's correlation-ship on trajectories, and the second non-stationarity refers to the distribution of future visited states changes caused by unfixed policy.
+
+From the literature on the deadly triad, I learn how combining \textbf{function approximation, bootstrapping, and off-policy} data can push TD methods beyond their classical convergence guarantees. Tsitsiklis and Van Roy formally analyze linear TD under fixed policies and exhibit counterexamples where TD diverges~\citep{tsitsiklis1997analysis}, while Sutton and Barto popularize the view that function approximation, bootstrapping, and off-policy sampling form a hazardous ``triad'' when combined~\citep{suttonbarto2018}. Van Hasselt et al.\ investigate this deadly triad in deep Q-networks, empirically mapping out regions of stability and divergence and showing how target networks, multi-step returns, and replay buffers modulate these behaviours~\citep{vanhasselt2018deep}. These works motivate our decision to explicitly place our toy model (\textbf{Goblet \& Ghost} experiments) inside the deadly-triad regime, so that the unfixed-policy TD dynamics we study are genuinely at risk of divergence rather than confined to safe policy-evaluation settings.
+
+From actor--critic, asynchronous RL, and high-dimensional policy-learning analyses, I learn how policy improvement can be modelled as a stochastic dynamical system coupled to TD-based value estimation. Konda and Tsitsiklis formalize actor--critic algorithms as two-time-scale stochastic approximation schemes in which the critic runs with a larger step size and tracks the value function associated with a slowly changing policy~\citep{konda2000acnips,konda2003actor}. Asynchronous advantage actor--critic (A3C) demonstrates that multi-threaded, on-policy actor--critic training with shared parameters can achieve strong empirical performance~\citep{mnih2016a3c}. Complementary ``RL perceptron'' and mean-field actor--critic analyses derive ordinary differential equations for policy generalization dynamics and study feature learning in over-parameterized settings~\citep{patel2023rlperceptron,yamamoto2024mfactorcritic}. Together, these works suggest that policy parameters can be treated as slow variables coupled to TD-based critics, and that their joint dynamics can, in principle, be captured by low-dimensional order parameters.
+
+Beyond these core papers, I also draw on several strands of work that address TD stability and learning dynamics from different angles. Gradient TD algorithms such as GTD, GTD2, and TDC recast off-policy value prediction as true stochastic gradient descent in a projected Bellman-error objective, obtaining convergence guarantees at the cost of slower learning~\citep{sutton2009fast,maei2011gtd}. Methods like Retrace($\lambda$), COP-TD, and emphatic TD($\lambda$) carefully adjust importance weights, truncation coefficients, or per-state emphases to regain contraction properties under off-policy sampling~\citep{munos2016retrace,hallak2017coptd,sutton2015emphatic}. Meanwhile, there is also a study about mean-field analyses of value-based deep RL study how the empirical distribution of network parameters evolves under Bellman-residual minimization. These works reinforce the view that both stability mechanisms and high-dimensional dynamics matter; our contribution aims to connect the DMFT perspective on TD loss dynamics with the deadly triad and with slow policy updates, filling a gap between fixed-policy TD theory and existing mean-field analyses of policy learning.
+
+\section*{Hypotheses}
+
+My hypothesis of this study is: Under the death triad setting, we expect to observe that as the policy update speed and the degree of off-policy gradually increase, the TD loss curve will continuously deform from "stable single plateau after decline" to "rise again after decline until divergence", and moderate noise can briefly delay this divergence at the critical edge.
+
+
+\section*{Experimental Plan}
+
+\begin{itemize}
+  \item \textbf{Toy model: Goblet \& Ghost calibration in the deadly-triad regime.} I first implement linear-function-approximation Q-learning with semi-gradient updates in the Goblet \& Ghost environment, using random Gaussian features and off-policy behaviour policies to deliberately enter the deadly triad. We will measure TD loss, prediction-error loss relative to a tabular teacher $Q$, parameter norms, and episodic returns across a range of learning rates, discount factors, and off-policy levels, mapping out empirical stability regions and observe whether the ``down-then-up'' loss patterns characteristic of divergence appears. (Already finished this part, except for collecting the results.)
+
+  \item \textbf{Extending fixed-policy DMFT to slowly varying policies.} Next, I will construct a high-dimensional linear model in which the transition kernel and feature covariances are parametrized by a low-dimensional policy parameter that evolves slowly over training. Building on the fixed-policy DMFT recursion of~\citet{bordelon2023loss}, we derive and numerically solve modified DMFT equations with slowly time-dependent operators, comparing their predicted loss curves to those observed in the toy model and in fixed-policy slices of Goblet \& Ghost to test our slow-policy hypotheses.
+
+  \item \textbf{Two-time-scale actor--critic dynamics and unfixed-policy effects.} I will then implement a simplified actor--critic scheme with a linear TD critic and a parametric policy (e.g., softmax over features), both in the toy model and in Goblet \& Ghost. By varying the ratio of actor to critic step sizes and the degree of off-policy sampling, I will study how the critic's TD and prediction-error losses evolve jointly with policy performance, and I will compare these trajectories to the coupled mean-field dynamics suggested by actor--critic and RL-perceptron theory~\citep{konda2003actor,patel2023rlperceptron,yamamoto2024mfactorcritic}. This step makes sure that we study the situation that policy changes by real RL algo instead of artificial scheduling (step2).
+
+  \item \textbf{Noise injections and stability near the edge of the deadly triad.} Finally, I will systematically vary noise sources---batch size, exploration rate, and explicit Gaussian perturbations to parameters---in the model runs located near the empirically determined stability boundary. For each setting, we track TD loss, prediction-error loss, and returns over time, and we contrast the outcomes with DMFT-based predictions to assess whether moderate noise can regularize learning and how the effective divergence boundary shifts as noise strength changes.
+\end{itemize}
+
+\paragraph{Goblet \& Ghost.}
+Throughout the project, the Goblet \& Ghost grid-world serves as a concrete, finite MDP in which the deadly triad can be explicitly realized: the environment has stochastic transitions, moving adversaries, and sparse rewards, yet its state--action space is small enough to allow tabular teacher policies and exhaustive evaluation. This makes it an ideal testbed for embedding our linear TD toy models, visualizing unfixed-policy TD loss dynamics, and validating DMFT predictions against actual RL training curves.
+
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.25\linewidth]{GG.jpeg}
+\end{figure}
+
+This game is about controlling the agent to get positive reward Goblets, avoid negative reward Goblets and Ghosts in a finite map. This game is made by the course \textbf{CS1820: Planning and Learning Methods in AI}. I have inquired to professors and get the permission to use the environment in our course projects.
+
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+\end{document}
+

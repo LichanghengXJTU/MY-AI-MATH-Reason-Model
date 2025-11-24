@@ -1,0 +1,491 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2024
+
+
+% ready for submission
+\usepackage{neurips_2024}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%     \usepackage[preprint]{neurips_2024}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%     \usepackage[final]{neurips_2024}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2024}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{amsmath} 
+\usepackage{xcolor}
+
+\newcommand{\todo}[1]{\textbf{\textcolor{red}{TODO: #1}}}
+
+
+\title{Loss Dynamics in Temporal Differences of Reinforcement Learning with Unfixed Policy}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+
+\author{%
+  David S.~Hippocampus\thanks{Use footnote for providing further information
+    about author (webpage, alternative address)---\emph{not} for acknowledging
+    funding agencies.} \\
+  Department of Computer Science\\
+  Cranberry-Lemon University\\
+  Pittsburgh, PA 15213 \\
+  \texttt{hippo@cs.cranberry-lemon.edu} \\
+  % examples of more authors
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \AND
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+
+\end{abstract}
+
+
+\section{Introduction}
+
+Temporal-difference (TD) learning sits at the heart of modern reinforcement learning (RL): it underlies classic value-based methods such as TD($\lambda$) and Q-learning, and provides the critic in a wide range of actor--critic algorithms~\citep{suttonbarto2018}. By combining bootstrapping with function approximation and off-policy data, TD methods power the large-scale deep RL systems that achieve superhuman performance in games and control. Yet, in contrast to supervised deep learning, we still lack a precise understanding of how TD losses evolve during training, how the structure of the environment and features shapes these dynamics, and where the boundary between stable learning and catastrophic divergence lies.
+
+This question becomes particularly pressing in the setting of the \emph{deadly triad} of function approximation, bootstrapping, and off-policy learning~\citep{vanhasselt2018deep,suttonbarto2018}. Classical analyses already show that, in this regime, TD(0) with linear function approximation can diverge even on simple Markov chains~\citep{tsitsiklis1997analysis}. At the same time, deep RL systems such as DQN routinely operate in the deadly-triad regime and often remain stable in practice, suggesting that between guaranteed convergence and provable divergence there is a rich landscape of intermediate behaviours. Mapping out this landscape---and in particular, understanding how loss curves behave as the system is pushed towards the edge of instability---requires tools that go beyond asymptotic convergence theorems.
+
+A key difficulty is that TD training data are inherently non-stationary. Even when the policy is fixed, the agent samples along Markovian trajectories, so successive feature vectors are temporally correlated and the semi-gradient noise exhibits non-trivial autocorrelations. We refer to this as \emph{type-I non-stationarity}: the data distribution is stationary at the level of the Markov chain, but individual updates are coupled along trajectories. A second, more subtle source of non-stationarity arises once the policy itself is updated. As the agent learns, the state--action distribution $d_{\pi_t}$ under the current policy $\pi_t$ drifts over time, continuously reshaping both TD targets and noise statistics. We refer to this as \emph{type-II non-stationarity}: the data distribution changes because the policy changes. Many practical RL algorithms, including Q-learning and actor--critic, operate squarely in this second regime.
+
+Recent work by Bordelon et al.\ has made an important step towards a theory of TD loss dynamics under type-I non-stationarity. In a high-dimensional linear setting, they use dynamical mean-field theory (DMFT) to derive closed-form learning curves for TD(0) under a fixed policy, showing how temporal correlations along Markov trajectories reshape error plateaus and the effect of learning rate and feature structure on convergence~\citep{bordelon2023loss}. Complementary work on the ``RL perceptron'' analyzes the dynamics of policy-gradient learning in high dimensions, deriving ordinary differential equations (ODEs) for policy generalization under sparse rewards~\citep{patel2023rlperceptron}. However, these two strands of theory treat value learning and policy learning separately: Bordelon et al.\ hold the policy fixed, while RL-perceptron models focus purely on policy learning without bootstrapping.
+
+In this paper we take a step towards a unified dynamical picture of reinforcement learning that couples TD-based policy evaluation with policy updates. Our guiding question is: \emph{How do TD loss dynamics behave when we slowly turn on the second kind of non-stationarity, transitioning from fixed-policy evaluation to genuine policy improvement, in an environment that exhibits the deadly triad?} Rather than directly attacking the full actor--critic problem in one shot, we adopt a controlled path from tractable to realistic settings. We start from the fixed-policy DMFT formalism of~\citet{bordelon2023loss} and embed it into a deliberately harsh testbed that combines linear function approximation, bootstrapping, and off-policy sampling---a ``worst-case'' deadly-triad configuration inspired by van Hasselt et al.~\citep{vanhasselt2018deep}. We then gradually relax the fixed-policy assumption by introducing slow, structured policy changes and finally a two-time-scale actor--critic update in which a TD critic and a parametric policy evolve together.
+
+Concretely, we construct a toy model in which TD learning with linear features is coupled to a slowly varying policy parameter that modulates the effective transition kernel. In the high-dimensional limit, we derive DMFT equations that track both the TD loss and a small number of order parameters describing the joint evolution of value and policy. This ``slow-policy'' regime can be interpreted as a type-II non-stationarity approximation to actor--critic algorithms with a strong separation of time scales, in the spirit of classical two-time-scale stochastic approximation~\citep{konda2003actor}. We then instantiate these ideas in a finite Markov decision process based on the Goblet \& Ghost game---a small grid-based environment with stochastic transitions and moving adversaries---where we can explicitly realize the deadly triad and measure empirical loss dynamics under Q-learning and actor--critic updates.
+
+Finally, we investigate the role of noise in this coupled system. The DMFT framework of~\citet{bordelon2023loss} already highlights how different sampling schemes (online TD with batch size one versus batched updates) lead to qualitatively different plateau behaviours even under a fixed policy. Extending this perspective to the deadly-triad regime, we ask whether stochasticity---from TD semi-gradient noise, from explicit Gaussian perturbations, or from exploration---can stabilise learning near the edge of divergence, or whether it instead accelerates blow-up. Our analysis combines mean-field theory with experiments in Goblet \& Ghost, closing the loop between high-dimensional theory and concrete RL environments.
+
+In summary, our contributions are threefold:
+\begin{itemize}
+  \item We extend the DMFT analysis of TD(0) from fixed-policy evaluation to a setting with \emph{slowly varying policies}, capturing a controlled form of type-II non-stationarity in high-dimensional linear function approximation.
+  \item We derive coupled mean-field dynamics for a two-time-scale actor--critic system in which a TD critic and a parametric policy co-evolve, connecting TD loss dynamics to policy learning in the spirit of RL-perceptron models and mean-field actor--critic theory~\citep{patel2023rlperceptron,yamamoto2024mfactorcritic}.
+  \item We construct a deadly-triad testbed based on the Goblet \& Ghost environment and empirically probe TD loss dynamics and divergence boundaries, comparing them to DMFT predictions and analyzing how different sources of noise affect stability.
+\end{itemize}
+Together, these results move towards a theory of reinforcement learning that treats policy evaluation and policy improvement as a coupled dynamical system rather than two separate black boxes.
+
+
+
+
+
+\todo{Finished but unpolished}
+    
+
+
+\section{Related Work}
+
+\paragraph{Temporal-difference learning, function approximation, and the deadly triad.}
+Classical work on TD learning with function approximation focuses on convergence and approximation error under a fixed policy. Tsitsiklis and Van Roy analyze TD(0) with linear function approximation for infinite-horizon discounted Markov chains, characterizing conditions under which the TD operator is a contraction and providing counterexamples where TD diverges~\citep{tsitsiklis1997analysis}. Sutton and Barto popularized the view that combining function approximation, bootstrapping, and off-policy learning---the ``deadly triad''---can lead to unbounded value estimates even when each component is benign in isolation~\citep{suttonbarto2018}. Building on this perspective, van Hasselt et al.\ systematically investigate the deadly triad in deep Q-networks (DQN), showing empirically how factors such as target networks, multi-step returns, and experience replay modulate the emergence of divergence in practice~\citep{vanhasselt2018deep}.
+
+A parallel line of work aims to stabilise off-policy TD methods in the presence of function approximation by modifying the objective or update rule. Gradient TD algorithms, such as GTD, GTD2, and TDC, recast value prediction as a true stochastic gradient problem in a projected Bellman-error objective, yielding convergence guarantees under off-policy sampling at the cost of slower learning~\citep{sutton2009fast,maei2011gtd}. Other approaches, including Retrace($\lambda$)~\citep{munos2016retrace}, COP-TD~\citep{hallak2017coptd}, and emphatic TD($\lambda$)~\citep{sutton2015emphatic}, adjust importance weights, truncation coefficients, or per-step emphases to regain contraction properties while making efficient use of off-policy trajectories. These methods primarily address \emph{whether} learning converges and to which fixed point; in contrast, our focus is on the \emph{transient dynamics} of TD loss and on how these dynamics change as we introduce policy updates and move deeper into the deadly-triad regime.
+
+\paragraph{Learning dynamics and mean-field / DMFT approaches in reinforcement learning.}
+Beyond convergence, a smaller but growing literature studies the full time course of learning in RL using tools from statistical physics and mean-field theory. Bordelon et al.\ develop a dynamical mean-field theory (DMFT) for TD(0) with linear function approximation under a fixed policy, in a high-dimensional limit where features can be modelled as Gaussian processes with temporal correlations~\citep{bordelon2023loss}. Their analysis yields closed-form learning curves and reveals qualitative phenomena such as extended plateaus in value error arising from semi-gradient noise and subsampling of trajectories. In a complementary direction, the RL perceptron of Patel et al.\ considers policy-gradient learning in a high-dimensional perceptron model, deriving ODEs for the overlap between the learned policy and a teacher policy and unveiling rich behaviours such as delayed learning under sparse rewards and speed--accuracy trade-offs~\citep{patel2023rlperceptron}.
+
+Other mean-field analyses focus on value-based methods with nonlinear function approximators. For example, recent work develops mean-field theories for two-layer neural networks trained with variants of Q-learning or soft Q-learning, showing how the empirical distribution of network weights evolves under Bellman-residual minimization and characterizing regimes of ``lazy'' versus feature-learning dynamics. While the architectural details differ from the linear TD setting, these studies share with our work the goal of obtaining closed dynamical equations that capture typical-case behaviour in high dimensions. Our contribution can be viewed as marrying the TD DMFT of~\citet{bordelon2023loss} with the policy-learning perspective of~\citet{patel2023rlperceptron}, and then placing the resulting theory in a deadly-triad context.
+
+\paragraph{Actor--critic algorithms and two-time-scale stochastic approximation.}
+Actor--critic methods separate policy evaluation (the critic) from policy improvement (the actor), with the critic typically implemented via TD learning and the actor updated along an approximate policy-gradient direction. Early theoretical analyses by Konda and Tsitsiklis formalize actor--critic algorithms as two-time-scale stochastic approximation schemes in which the critic's step size is larger than the actor's, allowing the critic to track the value function corresponding to the slowly changing policy~\citep{konda2000acnips,konda2003actor}. This two-time-scale perspective underlies many practical deep RL algorithms as well. For instance, asynchronous advantage actor--critic (A3C) employs multiple parallel actor--learners updating a shared network with an on-policy actor--critic loss, achieving strong performance on Atari and continuous control benchmarks~\citep{mnih2016a3c}.
+
+More recently, mean-field and dynamical systems tools have been brought to bear on actor--critic algorithms themselves. Yamamoto et al.\ introduce the Mean Field Langevin Actor--Critic (MF-LAC) algorithm, analyzing its global convergence and feature-learning properties in an over-parameterized neural setting by coupling a mean-field description of the critic with Langevin dynamics for the actor~\citep{yamamoto2024mfactorcritic}. Other works on mean-field control and actor--critic study the evolution of policy and value-function parameters as coupled ODEs or partial differential equations, highlighting how separation of time scales and noise can shape convergence beyond the ``lazy training'' regime. Our work is aligned with this trend but differs in two key respects: we focus on the TD \emph{loss dynamics} rather than solely on asymptotic optimality, and we deliberately place the actor--critic system in a deadly-triad regime with off-policy data and bootstrapping.
+
+\paragraph{Noise, sampling schemes, and stability in TD learning.}
+The role of noise and sampling in TD learning has long been recognized as a crucial factor for both performance and stability. Even under a fixed policy, online TD with batch size one and experience resampling can lead to semi-gradient noise with non-trivial temporal correlations, influencing both convergence speed and the shape of learning curves~\citep{bordelon2023loss}. Multi-step return methods and variance-reduction techniques, such as Retrace($\lambda$)~\citep{munos2016retrace}, aim to trade off bias and variance by balancing rapid reward propagation against the accumulation of approximation errors. Emphatic TD~\citep{sutton2015emphatic} shows that carefully designed state-dependent emphases can stabilise off-policy TD by matching the update weighting to the ``follow-on'' distribution of the Markov chain.
+
+In the context of deep RL, works like~\citet{vanhasselt2018deep} also highlight the stabilising role of target networks, replay buffers, and exploration noise when operating in the deadly-triad regime. However, most of these studies either work with finite-dimensional counterexamples and worst-case analyses, or rely on empirical sweeps across hyperparameters in complex environments. By contrast, our DMFT-based analysis provides a typical-case, high-dimensional description of TD loss dynamics in the presence of both type-I (Markovian) and type-II (policy-induced) non-stationarities, and our Goblet \& Ghost experiments instantiate these dynamics in a concrete, finite MDP where the deadly triad is explicitly realized.
+
+\todo{Finished but unpolished}
+
+
+
+\section{Problem Setup and Intuition from a Toy Model}
+
+In this section we specify the concrete control problem and the associated TD update rules, define the loss functionals that we will track, and describe how these ingredients are instantiated in the Goblet \& Ghost environment. This construction yields a fully specified \emph{toy model} of temporal-difference control in a high-risk configuration of the dead triad: bootstrapping, function approximation, and off-policy data, combined with an \emph{unfixed} policy in which both the behavior and target policies are updated from the current Q-function.
+
+Our goal is not to derive a closed-form theory for this toy model, but to use it as an empirical testbed for ``worst-case'' unfixed-policy TD dynamics. By embedding our TD errors and loss definitions into Goblet \& Ghost, we obtain concrete learning-curve and divergence phenomena that serve as intuition for the theoretical developments in later sections. There, we return to the more tractable fixed-policy DMFT setting, and then gradually relax the fixed-policy assumption---for example within an actor--critic framework with separated time scales---to analytically trace how temporal-difference learning transitions from fixed-policy evaluation to unfixed-policy control.
+
+\subsection{Problem Setup}
+
+We consider a discrete-time Markov decision process (MDP) represented by the tuple $(\mathcal{S}, \mathcal{A}, P, r)$. Here, $\mathcal{S}$ is a finite state space, $\mathcal{A}$ is a finite action set, $P(s' \mid s,a)$ gives the conditional probability of transitioning from the current state $s \in \mathcal{S}$ to the next state $s' \in \mathcal{S}$ when taking action $a \in \mathcal{A}$, and $r(s,a,s')$ denotes the immediate reward obtained from that transition. The discount factor $\gamma \in [0,1)$ controls the weight of future rewards in the current objective. The Goblet \& Ghost game is a concrete instance of such an MDP.
+
+In this environment, at each time step $t = 0,1,2,\dots$, the agent observes the current state $S_t \in \mathcal{S}$, selects an action $A_t \in \mathcal{A}$ according to some behavior policy $\mu$, interacts with the environment to obtain an immediate reward $R_{t+1}$, and then transitions to the next state $S_{t+1}$. The behavior policy $\mu(a \mid s)$ is a conditional distribution that specifies the probability of choosing action $a$ in state $s$. In addition to the behavior policy, we also introduce a (potentially different) target policy $\pi(a \mid s)$: it represents the ``desired behavior'' that we ultimately aim to approximate. For example, in Q-learning the target policy is often taken to be the greedy or softmax policy with respect to the current estimate of the Q-values. The behavior policy is responsible for \emph{sampling data}, while the target policy defines what we ``should learn to do''; the mismatch between these two, i.e., the case $\mu \neq \pi$, constitutes the off-policy aspect at the core of the dead triad.
+
+To perform approximation in a high-dimensional state--action space, we adopt linear function approximation for the action-value function. Specifically, we assume the existence of a feature map $\phi : \mathcal{S} \times \mathcal{A} \to \mathbb{R}^N,~~ (s,a) \mapsto \phi(s,a)$, where $\phi(s,a) \in \mathbb{R}^N$ is an $N$-dimensional real vector describing the ``features'' of taking action $a$ in state $s$. In our toy model we assume that these features are random Gaussian vectors: in an appropriate statistical sense, $\phi(s,a) \sim \mathcal{N}(0, \Sigma), ~~ \Sigma \in \mathbb{R}^{N \times N}$ is a symmetric positive definite covariance matrix.\label{phimatrix} Intuitively, one may view $\phi(s,a)$ as obtained by projecting a one-hot encoding of the state--action pair through a fixed random matrix into $\mathbb{R}^N$; in subsequent DMFT analysis, this ``Gaussian feature assumption'' will enable analytic calculations of the learning dynamics.
+
+Under linear approximation, we represent the Q-function by a parameter vector $\mathbf{w} \in \mathbb{R}^N$, and approximate the action-value function by $Q_{\mathbf{w}}(s,a) = \mathbf{w}^\top \phi(s,a)$. Here $Q_{\mathbf{w}}(s,a)$ is the estimated value of the state--action pair $(s,a)$ under parameters $\mathbf{w}$; from a physical perspective it approximates the expected discounted return obtained by starting from $(s,a)$ and following some target policy $\pi$. Each component $w_i$ of the parameter vector can be interpreted as the linear weight associated with the $i$-th feature dimension in the value function.
+
+To analyze the dynamics of off-policy TD learning, we specify the behavior policy $\mu$ and the target policy $\pi$ more concretely. A common choice is to use an $\epsilon$-greedy behavior policy,
+\[
+\mu(a \mid s) = (1-\epsilon)\,\mathbf{1}\bigl[a = a_{\mathrm{beh}}(s)\bigr] + \frac{\epsilon}{|\mathcal{A}|},
+\]
+where $a_{\mathrm{beh}}(s)$ is typically taken to be the greedy action under the current Q-function,
+\[
+a_{\mathrm{beh}}(s) \in \arg\max_{a \in \mathcal{A}} Q_{\mathbf{w}}(s,a),
+\]
+$\epsilon \in [0,1]$, also known as the exploration rate, controls the strength of exploration, and $|\mathcal{A}|$ denotes the size of the action set. The target policy $\pi$ is defined as
+\[
+\pi(a \mid s) = \text{Greedy or Softmax w.r.t. } Q_{\mathbf{w}}(s,a)
+\]
+that is, as a greedy or approximately greedy policy with respect to the current Q-function. In standard Q-learning, the target policy can be regarded as the ``eventual optimal greedy policy'', while the behavior policy may be an $\epsilon$-greedy policy with respect to the current Q-function or a completely different policy (for example a uniformly random policy or a policy from an older parameter iterate). When $\mu \neq \pi$, the data distribution differs from the distribution under the target policy, forming the off-policy corner of the dead triad.
+
+In particular, during training both the behavior policy $\mu_t$ and the target policy $\pi_t$ are recomputed from the current Q-function $Q_{\mathbf{w}_t}$ (e.g. $\epsilon$-greedy for $\mu_t$, greedy for $\pi_t$). Hence, the data distribution feeding the TD updates is itself a function of the evolving parameters, which is precisely the second type of non-stationarity (unfixed policy) we aim to study. \todo{State Second non-stationarity in Introduction and Related Works}
+
+Under this setup, the fundamental question addressed by our toy model can be stated as follows: given an MDP environment, a behavior policy $\mu$, and a family of linear function approximators $\{Q_{\mathbf{w}}\}$, how can we use temporal-difference (TD) methods based on trajectories generated by $\mu$ to update the parameter $\mathbf{w}$ so that $Q_{\mathbf{w}}$ approximates the action-value function under a target policy $\pi$ as closely as possible, and how can we characterize the temporal evolution and divergence behavior of the TD loss along this process? To this end, we first provide precise definitions of the TD error and the update rule, and then introduce a loss function that is suitable for analysis.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%11月14日早 写到这里了
+%明天的计划： 
+
+% 整理下面的推导证明：把这部分推导的TD更新和损失函数放进附录里面
+% 根据推导结果实现Goblet & Ghost小游戏嵌入
+% 写related works（LD in TDRL + Dead Traits + 四篇策略更新研究 + 更多论文搜索综述 + GG小游戏介绍）
+% 把related works + 已经写好的实验计划 + 我们的初步成果 写进proposal里面
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\subsection{TD Update and Semi-Gradient Derivation}
+
+In Q-learning, the TD target is a one-step lookahead bootstrapped return. Given the state--action--next-state triple $(S_t, A_t, S_{t+1})$ at time step $t$, along with the corresponding immediate reward $R_{t+1}$, the standard Q-learning TD target under parameters $\mathbf{w}$ is defined as
+\begin{equation}
+G_t(\mathbf{w}) = R_{t+1} + \gamma \max_{a' \in \mathcal{A}} Q_{\mathbf{w}}(S_{t+1}, a').
+\end{equation}
+Note that $G_t(\mathbf{w})$ itself depends on the parameter $\mathbf{w}$, since the maximization on the right-hand side is performed over the current Q-function. However, in the classical TD and Q-learning literature, to avoid second-order effects and complicated fixed-point structures, it is common to use the idea of a \emph{semi-gradient}: when computing gradients, the bootstrapped part of the target is treated as a ``constant'', and only the estimate at the current state--action pair $Q_{\mathbf{w}}(S_t,A_t)$ is differentiated with respect to $\mathbf{w}$. \todo{add reference of semi gradient to prove this}
+
+At any given time step $t$, we define the Q-learning TD error as
+\begin{equation}
+\delta_t^{\mathrm{QL}}(\mathbf{w})
+  = G_t(\mathbf{w}) - Q_{\mathbf{w}}(S_t, A_t)
+  = R_{t+1} + \gamma \max_{a' \in \mathcal{A}} Q_{\mathbf{w}}(S_{t+1}, a') - Q_{\mathbf{w}}(S_t, A_t).
+\end{equation}
+Intuitively, $\delta_t^{\mathrm{QL}}(\mathbf{w})$ measures, under the current parameter $\mathbf{w}$, the prediction error with respect to the one-step bootstrapped return: if the Q-function has reached an ideal fixed point, then the TD error should be zero in expectation.
+
+To cast the TD update as an explicit optimization problem, we introduce the \emph{instantaneous loss function} \todo{add the reference of instaneous loss function}
+\begin{equation}
+J_t(\mathbf{w}) = \frac{1}{2}\bigl(\delta_t^{\mathrm{QL}}(\mathbf{w})\bigr)^2.
+\end{equation}
+This $J_t(\mathbf{w})$ can be understood as the squared error loss defined by the single sample $(S_t, A_t, R_{t+1}, S_{t+1})$ at time $t$; it has exactly the same form as the mean-squared error in supervised learning, except that the ``target'' is the TD target $G_t(\mathbf{w})$ and the ``prediction'' is the current estimate $Q_{\mathbf{w}}(S_t, A_t)$. At a global scale, we aim to minimize the expected instantaneous loss
+\begin{equation}
+J(\mathbf{w}) = \mathbb{E}\bigl[J_t(\mathbf{w})\bigr]
+              = \frac{1}{2}\,\mathbb{E}\bigl[\bigl(\delta_t^{\mathrm{QL}}(\mathbf{w})\bigr)^2\bigr],
+\end{equation}
+where the expectation is taken over the distribution of state--action--next-state--reward quadruples induced by the behavior policy $\mu$ and the environment dynamics $P$. It is important to emphasize that, in the off-policy setting, this expectation is taken with respect to a distribution that does not coincide with the state--action distribution under the target policy $\pi$; this mismatch is one of the root causes of divergence in the dead triad. \todo{add reference of off policy features and dead triad}
+
+
+
+
+We now derive in detail the gradient of $J_t(\mathbf{w})$ with respect to $\mathbf{w}$ under the semi-gradient assumption, and then obtain the corresponding update rule. The following equation shows that under the semi-gradient approximation, the gradient of the instantaneous loss with respect to the parameters is approximated by the TD error multiplied by the negative feature vector. The derivation is in \ref{Gradient of the instantaneous loss}.
+
+
+\begin{equation}
+\nabla_{\mathbf{w}} J_t(\mathbf{w})
+  = \delta_t^{\mathrm{QL}}(\mathbf{w})\,\frac{\partial \delta_t^{\mathrm{QL}}(\mathbf{w})}{\partial \mathbf{w}}
+  \approx \delta_t^{\mathrm{QL}}(\mathbf{w})\,\bigl(-\phi(S_t, A_t)\bigr)
+  = -\delta_t^{\mathrm{QL}}(\mathbf{w})\,\phi(S_t, A_t).
+\end{equation}
+
+This helps to derive the semi-gradient update rules shown as follows. \ref{Semi-gradient update}
+
+\begin{equation}
+\mathbf{w}_{t+1}
+  = \mathbf{w}_t
+    + \eta \Bigl(
+      R_{t+1}
+      + \gamma \max_{a' \in \mathcal{A}} Q_{\mathbf{w}_t}(S_{t+1}, a')
+      - Q_{\mathbf{w}_t}(S_t, A_t)
+    \Bigr)\phi(S_t, A_t).
+\end{equation}
+
+
+
+\subsection{Loss Definitions and Computation in the Toy Model}
+\label{sec:toy-losses}
+
+Our toy model sits in the classical deadly-triad regime---bootstrapping, function approximation, and off-policy control---with an \emph{unfixed} policy: both the behavior policy $\mu_t$ and the target policy $\pi_t$ are updated from the current $Q_{\mathbf{w}_t}$. In such a non-stationary setting there is no single scalar objective that is exactly optimized at all times. Instead, we monitor two complementary loss-type quantities, together with a few auxiliary diagnostics, that jointly describe the learning and divergence behavior of the system.
+
+\paragraph{TD-based loss.}
+From a TD viewpoint we associate to parameters $\mathbf{w}$ the quantity
+\begin{equation}
+J(\mathbf{w})
+  = \frac{1}{2}\,\mathbb{E}\bigl[(\delta_t^{\mathrm{QL}}(\mathbf{w}))^2\bigr],
+\end{equation}
+interpreted as the expected squared TD error under a fixed reference trajectory distribution induced by some behavior policy $\mu$. In the deadly-triad setting, small $J(\mathbf{w})$ indicates that $Q_{\mathbf{w}}$ approximately satisfies the Bellman equation for this reference dynamics, even though the actual training process uses bootstrapping targets and a time-varying $\mu_t$. Empirically, we approximate this expectation by averaging squared TD errors along trajectories and define, for training checkpoints $n$ with parameters $\mathbf{w}_n$,
+\begin{equation}
+\mathcal{L}_{\mathrm{TD}}(n)
+  \approx \frac{1}{T_{\mathrm{eval}}}\sum_{t=0}^{T_{\mathrm{eval}}-1}
+    \bigl(\delta_t^{\mathrm{QL}}(\mathbf{w}_n)\bigr)^2,
+\end{equation}
+which we refer to as the TD loss curve of the toy model. The temporal evolution of $\mathcal{L}_{\mathrm{TD}}(n)$ reveals, for example, the strength of TD noise and the height and duration of TD plateaus caused by bootstrapping; later, we will connect this observable to DMFT calculations of TD-noise covariance. (Not in the toy model)
+
+\paragraph{Prediction-error loss relative to a teacher Q-function.}
+TD loss alone does not answer whether the agent is actually learning the ``right'' value function in a potentially divergent deadly-triad regime. To measure accuracy with respect to a reference solution we introduce a prediction-error loss. Concretely, we pre-compute a high-quality tabular ``teacher'' action-value function $Q_{\mathrm{teacher}}(s,a)$ using a numerically stable training protocol, and fix a reference state--action distribution $d_{\mathrm{ref}}(s,a)$ (for example the stationary distribution of a teacher policy or a uniform distribution over state--action pairs; see Appendix~\ref{app:loss-details} for details). We then define
+\begin{equation}
+\mathcal{L}_{\mathrm{pred}}(\mathbf{w})
+  = \mathbb{E}_{(s,a) \sim d_{\mathrm{ref}}}
+      \Bigl[\bigl(Q_{\mathrm{teacher}}(s,a) - Q_{\mathbf{w}}(s,a)\bigr)^2\Bigr],
+\end{equation}
+and estimate it on a finite evaluation set $\mathcal{D}_{\mathrm{eval}}
+ = \{(s_i, a_i)\}_{i=1}^K$ as
+\begin{equation}
+\widehat{\mathcal{L}}_{\mathrm{pred}}(n)
+  = \frac{1}{K} \sum_{i=1}^K
+      \bigl(Q_{\mathrm{teacher}}(s_i, a_i) - Q_{\mathbf{w}_n}(s_i, a_i)\bigr)^2.
+\end{equation}
+The curve $\widehat{\mathcal{L}}_{\mathrm{pred}}(n)$ plays the role of a learning curve for the toy model, directly analogous to fixed-policy value-learning curves studied via DMFT \todo{Cite Dr. Bordelon and Professor's paper}: in stable regimes it decays towards a plateau, whereas in deadly-triad regimes it can first decrease and then rise again as $Q_{\mathbf{w}}$ diverges, even while TD updates are still being applied.
+
+\paragraph{Auxiliary diagnostics and unfixed-policy viewpoint.}
+Alongside $\mathcal{L}_{\mathrm{TD}}(n)$ and $\mathcal{L}_{\mathrm{pred}}(n)$ we track several auxiliary diagnostics. The squared parameter norm
+\[
+\|\mathbf{w}_n\|^2 = \sum_{i=1}^N w_{n,i}^2
+\]
+reports whether the overall magnitude of the Q-function exhibits explosive growth. The maximum absolute Q-value,
+\[
+Q_{\max}(n) = \max_{(s,a)} \bigl|Q_{\mathbf{w}_n}(s,a)\bigr|,
+\]
+captures value explosion on (representative) state--action pairs. Finally, at each checkpoint $n$ we form the greedy policy induced by $Q_{\mathbf{w}_n}$, roll out multiple complete trajectories, and record the average episodic return as a function of $n$. These quantities do not directly enter the TD update, but together with $\mathcal{L}_{\mathrm{TD}}(n)$ and $\mathcal{L}_{\mathrm{pred}}(n)$ they provide a comprehensive empirical picture of how bootstrapping, function approximation, and off-policy exploration interact in the unfixed-policy setting.
+
+Formally, all expectations in $J(\mathbf{w})$ and $\mathcal{L}_{\mathrm{pred}}(\mathbf{w})$ should be understood with respect to a \emph{fixed} reference distribution (a frozen snapshot of $\mu_t$), while the actual training trajectory explores a time-dependent sequence of distributions $\{\mu_t, \pi_t\}_t$. In this sense, the ``losses'' above are best viewed as diagnostic functionals of an intrinsically non-stationary TD process, rather than strict optimization objectives that the algorithm minimizes at each step.
+
+
+\section{Theoretical Results of Loss Dynamics}
+
+
+
+
+
+
+
+
+\section{Noises in Dynamics}
+
+
+
+
+\section{Dynamics at the Edge of Dead Triad}
+
+
+
+\section{Conclusion}
+
+
+
+\section{Discussion}
+
+
+\clearpage
+
+\bibliographystyle{plainnat}
+\bibliography{mybib}
+
+\clearpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\appendix
+
+% Restart page numbering for appendices
+\setcounter{page}{1}
+\renewcommand*{\thepage}{S\arabic{page}}
+
+% Number equations within appendices as A.1, A.2, ...
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\section*{Appendix}
+
+\numberwithin{figure}{section}
+
+\section{TD gradient and update rules}
+
+\subsection{Semi-Gradient of the instantaneous loss} \label{Gradient of the instantaneous loss}
+By the chain rule, the gradient of the instantaneous loss with respect to the parameters is
+\begin{equation}
+\nabla_{\mathbf{w}} J_t(\mathbf{w})
+  = \frac{\partial J_t(\mathbf{w})}{\partial \mathbf{w}}
+  = \frac{\partial}{\partial \mathbf{w}}\left[\frac{1}{2}\bigl(\delta_t^{\mathrm{QL}}(\mathbf{w})\bigr)^2\right]
+  = \delta_t^{\mathrm{QL}}(\mathbf{w})\,\frac{\partial \delta_t^{\mathrm{QL}}(\mathbf{w})}{\partial \mathbf{w}}.
+\end{equation}
+Thus the key is to compute $\partial \delta_t^{\mathrm{QL}}(\mathbf{w}) / \partial \mathbf{w}$. Writing out the TD error explicitly,
+\[
+\delta_t^{\mathrm{QL}}(\mathbf{w}) = R_{t+1} + \gamma \max_{a' \in \mathcal{A}} Q_{\mathbf{w}}(S_{t+1}, a') - Q_{\mathbf{w}}(S_t, A_t),
+\]
+we see that there are two terms involving $\mathbf{w}$: the bootstrapped part $\gamma \max_{a'} Q_{\mathbf{w}}(S_{t+1}, a')$ and the current prediction $-Q_{\mathbf{w}}(S_t, A_t)$. Under a \emph{full-gradient} treatment, both terms would contribute to the gradient; however, in the semi-gradient method we make a crucial approximation: when computing the gradient, we treat the target term
+\[
+T_t(\mathbf{w}) := R_{t+1} + \gamma \max_{a' \in \mathcal{A}} Q_{\mathbf{w}}(S_{t+1}, a')
+\]
+as a quantity that may numerically depend on $\mathbf{w}$, but is regarded as a constant for the purpose of differentiation, i.e.,
+\[
+\frac{\partial T_t(\mathbf{w})}{\partial \mathbf{w}} \approx 0.
+\]
+This approximation only concerns the bootstrap structure itself and is orthogonal to the dimension of whether the "policy is fixed or will be updated". Under this assumption, the dependence of $\delta_t^{\mathrm{QL}}(\mathbf{w})$ on $\mathbf{w}$ arises only through the term $-Q_{\mathbf{w}}(S_t, A_t)$, and therefore
+\[
+\frac{\partial \delta_t^{\mathrm{QL}}(\mathbf{w})}{\partial \mathbf{w}}
+  \approx \frac{\partial}{\partial \mathbf{w}}\bigl[-Q_{\mathbf{w}}(S_t, A_t)\bigr].
+\]
+Since in our linear approximation model
+\[
+Q_{\mathbf{w}}(S_t, A_t) = \mathbf{w}^\top \phi(S_t, A_t),
+\]
+this is a linear function of $\mathbf{w}$, whose gradient is simply
+\[
+\frac{\partial Q_{\mathbf{w}}(S_t, A_t)}{\partial \mathbf{w}} = \phi(S_t, A_t).
+\]
+This gradient is an $N$-dimensional vector whose $i$-th component is $\partial Q_{\mathbf{w}}(S_t, A_t)/\partial w_i = \phi_i(S_t, A_t)$. Consequently,
+\[
+\frac{\partial \delta_t^{\mathrm{QL}}(\mathbf{w})}{\partial \mathbf{w}} \approx -\phi(S_t, A_t).
+\]
+Substituting this into the expression for the gradient of the instantaneous loss yields
+\begin{equation}
+\nabla_{\mathbf{w}} J_t(\mathbf{w})
+  = \delta_t^{\mathrm{QL}}(\mathbf{w})\,\frac{\partial \delta_t^{\mathrm{QL}}(\mathbf{w})}{\partial \mathbf{w}}
+  \approx \delta_t^{\mathrm{QL}}(\mathbf{w})\,\bigl(-\phi(S_t, A_t)\bigr)
+  = -\delta_t^{\mathrm{QL}}(\mathbf{w})\,\phi(S_t, A_t).
+\end{equation}
+That is, under the semi-gradient approximation, the gradient of the instantaneous loss with respect to the parameters is exactly the TD error multiplied by the negative feature vector.
+
+
+\subsection{Semi-gradient update and consistency with tabular Q-learning.} \label{Semi-gradient update}
+
+Given the gradient expression, we can apply stochastic gradient descent (SGD) to minimize $J(\mathbf{w})$. In a single update step, we use the gradient of $J_t(\mathbf{w})$ as an unbiased (or approximate) estimator of the gradient of $J(\mathbf{w})$, leading to the SGD update
+\begin{equation}
+\mathbf{w}_{t+1} = \mathbf{w}_t - \eta\,\nabla_{\mathbf{w}} J_t(\mathbf{w}_t),
+\end{equation}
+where $\eta > 0$ is the learning rate. Plugging in the approximate gradient derived above, we have
+\begin{equation}
+\mathbf{w}_{t+1} = \mathbf{w}_t - \eta\,\bigl(-\delta_t^{\mathrm{QL}}(\mathbf{w}_t)\,\phi(S_t, A_t)\bigr)
+                 = \mathbf{w}_t + \eta\,\delta_t^{\mathrm{QL}}(\mathbf{w}_t)\,\phi(S_t, A_t).
+\end{equation}
+Expanding the definition of the TD error, this update can be written as
+\begin{equation}
+\mathbf{w}_{t+1}
+  = \mathbf{w}_t
+    + \eta \Bigl(
+      R_{t+1}
+      + \gamma \max_{a' \in \mathcal{A}} Q_{\mathbf{w}_t}(S_{t+1}, a')
+      - Q_{\mathbf{w}_t}(S_t, A_t)
+    \Bigr)\phi(S_t, A_t).
+\end{equation}
+This is precisely the ``semi-gradient Q-learning update under linear function approximation'' that we outlined in the plan. We see that its structure is completely consistent with the standard tabular Q-learning update: if we choose one-hot features for each state--action pair, i.e., define for every $(s,a)$ a basis vector $\phi(s,a) = e_{(s,a)}$, then the update reduces to
+\[
+w_{i,t+1} = w_{i,t} + \eta\,\delta_t^{\mathrm{QL}}(\mathbf{w}_t)\,\mathbf{1}\bigl[i = (S_t, A_t)\bigr],
+\]
+which means that only the component corresponding to the currently visited state--action pair is updated. This is equivalent to the classical tabular update
+\[
+Q_{t+1}(S_t, A_t)
+  = Q_t(S_t, A_t)
+    + \eta\Bigl(
+      R_{t+1}
+      + \gamma \max_{a' \in \mathcal{A}} Q_t(S_{t+1}, a')
+      - Q_t(S_t, A_t)
+    \Bigr).
+\]
+Thus, the semi-gradient Q-learning update under linear function approximation can be viewed as a direct generalization of tabular Q-learning, with parameter sharing across different state--action pairs coupling their updates. \textbf{However}, in the loss dynamics theory, we should step in "dead triad", which means that we need to follow the function approximation and cannot choose $\phi(s,a)$ as an one-hot feature. Here, we consider Gaussian features with covariance matrix $\Sigma$ as in Sec.~\ref{phimatrix}. Here, the derivation of one-hot $\phi$ is only to show the intuition that normal \emph{Q-learning} update rule is a special situation of TD.
+
+
+\section{Additional Details on Loss Definitions and Evaluation}
+\label{app:loss-details}
+
+\paragraph{Instantaneous TD loss and empirical averaging.}
+In the main text we introduced the TD-based functional
+\[
+J(\mathbf{w}) = \frac{1}{2}\,\mathbb{E}\bigl[(\delta_t^{\mathrm{QL}}(\mathbf{w}))^2\bigr],
+\]
+which should be understood as a theoretical optimization objective defined under a fixed reference behavior policy $\mu$. In practice, however, we cannot take expectations over the true trajectory distribution and instead work with empirical averages. For a single training run with TD errors $\{\delta_t^{\mathrm{QL}}(\mathbf{w})\}_{t=0}^{T-1}$ at time steps $t = 0,\dots,T-1$, we define the instantaneous empirical TD loss
+\begin{equation}
+\widehat{\mathcal{L}}_{\mathrm{TD}}(\mathbf{w}; T)
+  = \frac{1}{T}\sum_{t=0}^{T-1} \bigl(\delta_t^{\mathrm{QL}}(\mathbf{w})\bigr)^2.
+\end{equation}
+When training is sufficiently long and the underlying process is approximately stationary, $\widehat{\mathcal{L}}_{\mathrm{TD}}(\mathbf{w}; T)$ becomes statistically close to $2J(\mathbf{w})$. In our toy model experiments, we do not use $\widehat{\mathcal{L}}_{\mathrm{TD}}$ as an explicit optimization objective (the optimization is already encoded in the semi-gradient updates), but we treat it as an observable: its level and fluctuations provide an empirical measure of TD-noise strength and the height of the TD plateau, which later guides the DMFT analysis of bootstrapping-noise covariance. To reduce variance in plots, we typically select discrete checkpoints $n = 1,2,\dots$ along training, each with parameters $\mathbf{w}_n$, and compute $\widehat{\mathcal{L}}_{\mathrm{TD}}(\mathbf{w}_n; T_{\mathrm{eval}})$ either over a sliding window or over a separate evaluation phase, which yields the curve $\mathcal{L}_{\mathrm{TD}}(n)$ reported in the figures.
+
+\paragraph{Construction of the teacher Q-function and reference distribution.}
+To define the prediction-error loss, we require a reference action-value function. In a finite state--action environment such as Goblet \& Ghost, we first train a high-quality tabular Q-table using a ``sufficiently stable and safe'' method. Concretely, we run tabular Q-learning under on-policy or near on-policy conditions (e.g., small learning rate, $\epsilon$-greedy with small $\epsilon$, and a large number of training episodes) until convergence. The resulting Q-table is denoted
+\[
+Q_{\mathrm{teacher}}(s,a),
+\]
+and is regarded as a reference action-value function, either as an approximation to the optimal Q-function $Q^*(s,a)$ or to the Q-function $Q^{\pi}(s,a)$ under a fixed teacher policy $\pi$ induced by $Q_{\mathrm{teacher}}$.
+
+Next, we choose a state--action distribution $d_{\mathrm{ref}}(s,a)$ with respect to which prediction error is measured. Two natural choices are:
+(i) the stationary state--action distribution under the greedy teacher policy $\pi_{\mathrm{teacher}}$, and
+(ii) the uniform distribution over all admissible state--action pairs.
+In practice we approximate $d_{\mathrm{ref}}$ by an evaluation dataset
+\[
+\mathcal{D}_{\mathrm{eval}} = \{(s_i, a_i)\}_{i=1}^K,
+\]
+obtained either by sampling long trajectories under $\pi_{\mathrm{teacher}}$ or by enumerating the state--action grid (possibly sub-sampled). Given a checkpoint $n$ with parameters $\mathbf{w}_n$, the empirical prediction-error loss is
+\begin{equation}
+\widehat{\mathcal{L}}_{\mathrm{pred}}(n)
+  = \frac{1}{K} \sum_{i=1}^K
+      \bigl(Q_{\mathrm{teacher}}(s_i, a_i) - Q_{\mathbf{w}_n}(s_i, a_i)\bigr)^2,
+\end{equation}
+which approximates
+\[
+\mathcal{L}_{\mathrm{pred}}(\mathbf{w}_n)
+  = \mathbb{E}_{(s,a)\sim d_{\mathrm{ref}}}
+      \bigl[\,\bigl(Q_{\mathrm{teacher}}(s,a) - Q_{\mathbf{w}_n}(s,a)\bigr)^2\,\bigr].
+\]
+
+\paragraph{Relation to fixed-policy DMFT learning curves.}
+In the fixed-policy analysis of \todo{Dr. Bordelon and Professor's paper}, the learning curve is defined as the mean-squared deviation between a fixed target value function and its TD estimate, typically written in the form
+\[
+\mathcal{L}_n
+  = \big\langle \big(V^{\pi}(s) - \hat V_{\mathbf{w}_n}(s)\big)^2 \big\rangle_s.
+\]
+Our prediction-error loss reproduces this structure in the control setting by replacing the state-value $V^{\pi}(s)$ with a reference action-value $Q_{\mathrm{teacher}}(s,a)$ and by averaging over state--action pairs instead of states. Under stable settings (for example on-policy SARSA with linear function approximation), $\widehat{\mathcal{L}}_{\mathrm{pred}}(n)$ is \todo{EXPECT TO } observed to decrease monotonically towards a plateau. In deadly-triad configurations with bootstrapping, function approximation, and off-policy data, we instead \todo{EXPECT TO } observe non-monotonic behavior: $\widehat{\mathcal{L}}_{\mathrm{pred}}(n)$ can initially decrease as the agent moves closer to the teacher, but later increases again as TD instability drives $Q_{\mathbf{w}_n}$ away from the reference solution, even if episodic returns temporarily remain high. This non-monotonic ``down-then-up'' pattern is one of the central signatures of divergence that our DMFT analysis aims to explain.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}

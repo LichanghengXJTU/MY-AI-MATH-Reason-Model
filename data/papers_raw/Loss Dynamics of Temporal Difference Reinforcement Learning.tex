@@ -1,0 +1,942 @@
+\documentclass{article}
+
+
+% if you need to pass options to natbib, use, e.g.:
+\PassOptionsToPackage{numbers, sort&compress}{natbib}
+% before loading neurips_2023
+
+
+% ready for submission
+%\usepackage{neurips_2023}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+%\usepackage[preprint]{neurips_2023}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+\usepackage[final]{neurips_2023}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2023}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+%\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+%\usepackage{xcolor}         % colors
+\usepackage{bm}% bold math
+\usepackage{mathtools}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{subfigure}
+\usepackage{amsmath}   % Mathe 
+\usepackage{empheq}
+\usepackage{enumitem}
+%\setitemize{itemsep=0pt,topsep=0pt,parsep=0pt,partopsep=0pt,leftmargin=*}
+
+
+\newcommand{\paul}[1]{\textcolor{red}{([Paul]: #1)}}
+
+\newcommand{\cp}[1]{\textcolor{blue}{([Cengiz]: #1)}}
+
+\newtheorem*{geq_conjecture}{Gaussian Feature Assumption}
+
+\newtheorem{proposition}{Proposition}[section]
+
+\theoremstyle{remark}%
+\newtheorem{remark}{Remark}
+
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,allcolors=NavyBlue]{hyperref}
+
+\bibliographystyle{unsrtnat}
+\usepackage{doi}
+
+
+\title{Loss Dynamics of Temporal Difference Reinforcement Learning}
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\author{%
+  Blake Bordelon, 
+  %\thanks{Use footnote for providing further information
+    %about author (webpage, alternative address)---\emph{not} for acknowledging
+    %funding agencies.} 
+    \  Paul Masset, \ \ Henry Kuo
+    \  \& \  
+    Cengiz Pehlevan \\
+  John Paulson School of Engineering and Applied Sciences, \\ Center for Brain Science, \\ Kempner Institute for the Study of Natural \& Artificial Intelligence,
+  \\
+  Harvard University
+  \\
+  Cambridge MA, 02138 \\
+  \texttt{blake\_bordelon@g.harvard.edu}, \texttt{cpehlevan@g.harvard.edu}  \\
+  % examples of more authors
+  % \AND
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+  % \And
+  % Coauthor \\
+  % Affiliation \\
+  % Address \\
+  % \texttt{email} \\
+}
+
+\def\M{\bm M}
+\def\A{\bm A}
+\def\I{\bm I}
+\def\w{\bm w}
+\def\u{\bm u}
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+Reinforcement learning has been successful across several applications in which agents have to learn to act in environments with sparse feedback. However, despite this empirical success there is still a lack of theoretical understanding of how the parameters of reinforcement learning models and the features used to represent states interact to control the dynamics of learning. In this work, we use concepts from statistical physics, to study the typical case learning curves for temporal difference learning of a value function with linear function approximators. Our theory is derived under a Gaussian equivalence hypothesis where averages over the random trajectories are replaced with temporally correlated Gaussian feature averages and we validate our assumptions on small scale Markov Decision Processes. We find that the stochastic semi-gradient noise due to subsampling the space of possible episodes leads to significant plateaus in the value error, unlike in traditional gradient descent dynamics. We study how learning dynamics and plateaus depend on feature structure, learning rate, discount factor, and reward function. We then analyze how strategies like learning rate annealing and reward shaping can favorably alter learning dynamics and plateaus. To conclude, our work introduces new tools to open a new direction towards developing a theory of learning dynamics in reinforcement learning. 
+\end{abstract}
+
+% consider structured feature representation of environment states and
+
+\section{Introduction}
+Reinforcement learning (RL) is a general paradigm which allows agents to learn from experience the relative value of states in their environment and  to take actions that maximize long term rewards \cite{sutton2018reinforcement}. RL algorithms have been successfully applied in a number of real world scenarios such as strategic games like backgammon and Go, autonomous vehicles, and fine tuning language models \cite{tesauro1995temporal,mnih2015human,silver2016mastering,wurman2022outracing,kiran2021deep,ziegler2019fine}. 
+
+Despite these empirical successes, a theoretical understanding of the learning dynamics  and inductive biases of RL algorithms is currently lacking \cite{hessel2019inductive}.  A large fraction of the theoretical work has focused on proving convergence and deriving bounds both in the asymptotic \cite{dayan1992convergence,watkins1992q,tsitsiklis1997analysis,gordon2000reinforcement,kearns2002near,auer2008near} and non-asymptotic \cite{bhandari_TD_linear,dalal2018finite,lakshminarayanan2017linear} limits, but do not provide a full picture of the evolution of the learning dynamics.
+
+
+
+A desired feature of a candidate theory is to characterize the influence of function approximation to RL dynamics and its performance. Early versions of RL operated in a tabular setting, similar to dynamic programming \cite{bellman2010dynamic}, where all the states in the environment could be mapped one-to-one to a specific value and policy. In large and complex environments, it is not possible to enumerate all the states in the environment necessitating the use of function approximation for the target value and policy functions. Indeed, the recent success of many RL algorithms relies on deep reinforcement learning architectures that combine an RL architecture with deep neural networks to build effective value estimators and policy networks \cite{arulkumaran2017deep}. 
+
+
+One difficulty in analysing these algorithms compared to supervised learning settings is that the distribution of the data received at each time-step is not stationary. This non-stationarity arises from two principal sources: First, whether in an episodic or continuous setting, states visited within a learning trajectory are dependent on the recent past. Trajectories might be randomly sampled but points within a trajectory are correlated. Second, when the policy is updated it also changes the distribution of future visited states. \looseness=-1
+
+
+Here, we will focus on the first form of non-stationarity when learning a value function in the context of \textit{policy evaluation} \cite{sutton2018reinforcement} using a classical RL algorithm, temporal difference (TD) learning \cite{sutton1984temporal}. We develop a theory of learning dynamics for RL in this setting in a high dimensional asymptotic limit with a focus on understanding the role of linear function approximation from a set of nonlinear and static features. In particular, we leverage ideas from recent work in application of statistical physics to machine learning theory to perform an average over the possible sequences of features encountered during learning. Our contributions are as follows: \looseness=-1
+\begin{itemize}[leftmargin=*]
+    \item 
+We introduce concepts from statistical physics, including a path integral approach to describe dynamics \cite{martin1973statistical,crisanti2018path,helias2020statistical,bordelon2022self,bordelon2022influence} and the Gaussian equivalence assumption \cite{bordelon2020spectrum, loureiro2021learning, hu2022universality, bordelon2022sgd}, to derive a theory of learning dynamics in TD learning (\S\ref{sec:theory_TD}) in an online setting. We provide an analytical formula for the typical case learning curve for TD learning.
+    \item 
+We show that our theory predicts scaling of the learning convergence speed and performance plateaus with parameters of the problem including task-feature alignment \cite{canatar}, learning rate, discount factor or batch size (\S\ref{sec:spectral} and \S\ref{sec:plateaus_annealing}). Task-feature alignment is a metric that quantifies how features allow fast or slow learning for a given task.
+   \item We show our theory can be used to understand and guide design principles when choosing meta-parameters. Specifically, we show that we can use our theory to infer optimal schedules of learning rate annealing and the effects of reward shaping (\S\ref{sec:plateaus_annealing} and \S\ref{sec:reward_shaping}).
+\end{itemize}
+
+
+% \begin{itemize}[leftmargin=*]
+%     \item 
+%      First we introduce our problem setup and review the related literature on theoretical work in reinforcement learning and approaches from statistical physics to understand learning dynamics in supervised settings (\S\ref{sec:relatedworks}). 
+%      \item 
+%      We then introduce the key concepts, including the Gaussian equivalence hypothesis, that we use to derive our theory (\S\ref{sec:primer}). 
+%      \item 
+%      We then present our theoretical results. We only provide an outline of the derivation and state key results in the main text of the paper (\S\ref{sec:theory_TD}) and provide a full derivation in the Appendix \ref{app:derivation_learn_curves}
+
+%      \item 
+%      We show how our theory can explain several effects 
+
+%      \item 
+%      We show how our theory could guide design principles when choosing parameters. Specifically, we show that we can use our theory to infer optimal schedules of learning rate annealing and the effects of reward shaping procedures. \paul{We show that our theory can describe scaling of learning dynamics realistic settings}
+
+%      \item 
+%      Finally, we discuss the implications and limitations of our novel approach. 
+    
+% \end{itemize}
+
+\section{Problem Setup and Related Works}\label{sec:relatedworks}
+
+\subsection{Problem Setup}
+We consider a set of states denoted by $s$, possibly continuous, and a fixed policy $\pi$ which generates a distribution over actions given the state. The state dynamics are defined by a distribution $p(\tau)$ over trajectories through state space $\tau = \{ s_1 , s_2 ,... , s_T\}$. Note that state transitions do not have to be Markovian, but each trajectory is i.i.d. sampled from $p(\tau)$. We consider trajectories of length $T$. Each state is represented by an $N$-dimensional feature vector $\bm \psi(s)\in \mathbb{R}^N$, so that trajectory generates a collection of feature vectors $\{\bm \psi(s_t) \}_{t=1}^T$. The rewards are generated by a reward function $R(s)$ which depends on the state. (In general, the features and rewards can depend on action as well: transition dynamics are still fixed as the policy is fixed, but variance over rewards at a given state may need to be modeled, see Appendix \ref{app:action_dep_rewards}).  
+
+At any time, we are interested in characterizing the \textit{value function} associated with a state, which measures the expected discounted sum of future rewards when starting in state $s_0$
+\begin{align}
+    V(s_0) = R(s_0) + \sum_{t\geq 1} \mathbb{E}_{s_t | s_0} \gamma^t R(s_t) =  R(s_0) + \gamma \mathbb{E}_{s_1 | s_0} V(s_1) .
+\end{align}
+We use linear function approximation to learn the value function $\hat{V}(s) = \bm\psi(s) \cdot \w$. Similar to kernel learning \cite{scholkopf2002learning}, the features $\bm\psi$ should be high dimensional so that they can express a large set of possible value functions. 
+
+We study TD learning dynamics given this setup. At each step of the TD iteration, we sample a batch of $B$ independent trajectories from the distribution and compute the TD update
+\begin{align}
+    \w_{n+1} &= \w_n + \frac{\eta_n}{TB} \sum_{\mu=1}^B \sum_{t=1}^T \Delta_n^\mu(t) \bm\psi(s_n^\mu(t)) , \nonumber \\
+    \Delta_n^\mu(t) &\equiv R(s_n^\mu(t)) + \gamma \hat{V}(s_n^\mu(t+1)) - \hat{V}(s_n^\mu(t)) .
+\end{align}
+We operate in a online batch regime as the trajectories in each batch are resampled at each iteration. This is distinct from an offline setting where the batches would be resampled from a finite-sized buffer \cite{sutton2018reinforcement}. Convergence considerations for infinite-batch online TD learning width different types of features $\bm\psi$ are outlined in Appendix \ref{app:convergence_considerations}. The specific form for the TD-error $\Delta_n^\mu(t)$ depends on the precise variant of TD learning that is used. Here, we will focus on TD(0) but our approach can be extended to other TD learning rules and definitions of the return function. We see that the iterates $\w_n$ will form a stochastic process as each sequence of states in an episode $\{s^\mu_n(t)\}$ are drawn randomly from $p(\tau)$.  In general, we allow the learning rate $\eta_n$ to depend on iteration, an important point we will revisit later. The distribution of features $\{ \bm\psi(s_n^\mu(t)) \}$ over random trajectories $\tau$ is in general quite complicated, depending on the details of the state transitions and the nonlinear feature maps, which motivates the following question:
+
+\textbf{Question: \textit{How can the stochastic dynamics of temporal difference learning be characterized for complicated trajectory distributions $p(\tau)$ and feature maps $\bm\psi(s)$?}}
+
+To address this question, in this work, we provide an analysis of TD learning that explicitly models the statistics of stochastic semi-gradient updates to $\w_n$. Our framework is based on a Gaussian equivalence ansatz for TD learning and high dimensional mean field theory which predicts the statistics of TD errors $\Delta_n^\mu(t)$ and the weight iterates $\w_n$. The theory reveals a rich set of phenomena including plateaus unique to SGD noise in TD learning which can be ameliorated with learning rate annealing.\looseness=-1
+
+\vspace{-10pt}
+\subsection{Related Works}
+\vspace{-5pt}
+
+
+%Here we review previous work related to our approach. We first review work from the reinforcement learning literature that relates to convergence and the role of representations. We then review the expanding literature using concepts from statistical physics to understand the dynamics of learning in supervised setting. 
+
+The dynamics of TD learning have been notoriously difficult to analyse. Unlike supervised learning settings, sampled states are correlated across a trajectory and the algorithms involve bootstrapping: using estimates of the value function for future states in the temporal difference update \cite{sutton2018reinforcement}. Some prior works study the least-square TD learning rule, which solves, at each step $n$ of the algorithm, a linear system for the instantaneous best fit to $n$ samples \cite{tagorti2015rate, pan2017accelerated, geramifard2006ilstd}. Alternatively, many works focus on the online SGD version of TD learning, where incremental updates are made to the parameters at each step, using fresh samples. This is the setting of our work. The focus of this literature has initially been to prove convergence and bounds on asymptotic behavior \cite{tsitsiklis1997analysis,pineda1997mean,gordon2000reinforcement,kearns2002near,auer2008near}. More recently, progress has been made in deriving bounds in the non-asymptotic regime. Initial work assumed that data samples were \textit{i.i.d.} \cite{bhandari_TD_linear,dalal2018finite,lakshminarayanan2017linear,patil2023finite} and recent work has extended those approaches to Markovian noise \cite{bhandari_TD_linear,srikant2019finite,prashanth2021concentration,NEURIPS2022_32246544}. The majority of these proofs use the ODE-like method for stochastic approximation \cite{tsitsiklis1997analysis,borkar2000ode}, which corresponds to a limit of the stochastic semi-gradient dynamics where the effects of mini-batch noise are neglected. This is also known as the ``mean-path'' dynamics of TD learning and will correspond to the infinite batch limit of our theory. Furthermore, many of these methods require the use of iterative averaging of the learned value function, whereas we study the final iterate convergence. The approach we take here differs from many of these results as our goal is not to provide bounds on worst-case behavior but instead to provide a full description of the dynamics of the typical case scenario during learning.\looseness=-1 
+
+Our approach also highlights the importance of the structure of the representations in controlling the dynamics of learning. This had been long been recognized in reinforcement learning and previous works proposed to improve feature representations to improve algorithmic performance \cite{menache2005basis,mahadevan2007proto,bellemare2019geometric}. This line of work has shown the importance of the relative smoothness of the representations and target functions in the ODE limit of TD dynamics \cite{bellemare2019geometric,lyle_RL_dynamics}. Similarly, several methods have been proposed to empirically learn a better shaping function \cite{hu2020learning,zou2019reward}. In \textit{policy learning} it has also been recognized that using a gradient aligned to the statistics of the tasks, such as the natural gradient \cite{amari1998natural} can greatly speed up convergence \cite{kakade2001natural}. Our work does not explore such feature learning per se but could be used as a diagnostic tool to analyse how representations impact learning speed. 
+
+We adopt the perspective of statistical physics, by working with a simplified feature distribution which captures the learning dynamics and solving the theory in a high-dimensional limit \cite{seung1992statistical,  engel2001statistical, bahri2020statistical}. We derive TD reinforcement learning curves from a mean field theory formalism which is exact for infinite dimensional features and batch size. Similar calculations for supervised learning on Gaussian data have been shown to provide an accurate description of high dimensional dynamics \cite{mignacco2020dynamical, gerbelot2022rigorous, celentano2021high}. Further, even when data is not actually Gaussian, several algorithms, such as kernel or random-features regression, exhibit universality in their loss behavior, enabling analysis of the learning curve with a simpler Gaussian proxy \cite{bordelon2020spectrum, canatar, simon2022eigenlearning, loureiro2021learning, hu2022universality}. We exploit this idea in the TD learning setting to some success. We note that Gaussian equivalence or universality is not a panacea, and in many cases the Gaussian proxy can fail to capture important machine learning phenomena \cite{loureiro2021learning, refinetti2022neural, ingrosso2022data}. 
+
+%\section{Intuition for spectral properties affecting learning}
+%2x2 design similar to Blake's eLife paper. 
+%Linear MDP, high/low frequency reward and high/low frequency representations. Show learning curves 
+%\section{Relevant Abstractions for TD Learning Dynamics}\label{sec:primer}
+
+\section{Theoretical Results for Online TD Learning}\label{sec:theory_TD}
+
+%In this section we compute the typical case analysis of temporal difference RL.
+
+
+\subsection{Computation of Learning Curves}\label{sec:compute_learn_curves}
+
+We develop a dynamical mean field theory (DMFT) formalism can be utilized to compute the learning curves. We provide the full derivation of the DMFT in Appendix \ref{app:derivation_learn_curves}. This computation consists of tracking the moment generating function for the iterates $\w_n$ over the trajectories of randomly sampled features $\{ \bm\psi_\mu^n(t) \}_{t=1}^T$. In an appropriate high dimensional asymptotic limit, the results of our theory can be summarized as the following proposition.
+
+%Our goal is to compute the value estimation error $\mathcal L_n = \left< \left( V(s) - \hat{V}_n(s) \right)^2 \right>_s$ after $n$ steps of TD learning. To do this, we decompose the ground truth reward function $R(s) = \w_R \cdot \bm\psi(s)$ and value function $V(s) = \w_{TD} \cdot \bm\psi(s)$ in the basis of our features (unlearnable components can also be handled, see Appendix \ref{app:convergence_considerations}). In this case, the TD learner with perfect coverage (infinite batch size) at each step will converge to the ground truth $\w_{TD} = \left( \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right)^{-1} \bar{\bm\Sigma} \w_R$ (see Appendix \ref{app:convergence_considerations}). However, we now write the predictions for any arbitrary batch size. Each episode $\tau_n^\mu$ is sampled and the full episode is used for the TD update. From the DMFT equations a recurrence relation for the matrix $\M_n = \left< (\w - \w_{TD})(\w-\w_{TD})^\top \right>_{\{\tau_{n'}^\mu \}_{n'<n}}$ can be derived. $\M_n$ measures deviation from the fixed point of gradient flow dynamics $\w_{TD}$ over random sets of sampled episodes.
+
+\begin{proposition}\label{prop:full_result}
+Let $N,B\to\infty$ with $B/N = \mathcal{O}(1)$ and episode length $T = \mathcal{O}(1)$. Let the ground truth reward function be $R(s) = \w_R \cdot \bm\psi(s)$ and value function $V(s) = \w_{TD} \cdot \bm\psi(s)$ in the basis of our features. Define matrices 
+\begin{align} 
+\bm{\bar{\Sigma}} \equiv \frac{1}{T} \sum_t \bm\Sigma(t,t), \quad \bm{\bar{\Sigma}}_+ \equiv \frac{1}{T} \sum_t \bm\Sigma(t,t+1), \quad \A \equiv \bm{\bar \Sigma} - \gamma \bar{\bm\Sigma}_+,
+\end{align}
+and assume that the features are such that matrix $\A$ is of extensive rank in $N$. Then the typical value estimation error $\mathcal L_n = \left< \left( V(s) - \hat{V}_n(s) \right)^2 \right>_s$ after $n$ steps has the form
+\begin{align}
+    \mathcal{L}_n & = \frac{1}{N} \text{Tr} \bm{\bar\Sigma} \M_n,  \label{eq:lc1} \\ 
+    \M_{n+1} &= (\I - \eta \A) \M_n (\I - \eta \A)^\top + \frac{\eta^2}{\alpha^2 T^2} \sum_{tt'} Q_n(t,t') \bm \Sigma(t,t')  
+    \label{eq:lc2} \\
+    Q_n(t,t') &= \frac{1}{N} \left< (\w_R-\w_n)^\top \bm\Sigma(t,t') (\w_R-\w_n) \right> + \frac{\gamma }{N} \left<(\w_R-\w_n)^\top \bm\Sigma(t,t'+1)\w_n  \right> \nonumber
+    \\
+    &+ \frac{\gamma}{N} \left<\w_n^\top \bm\Sigma(t+1,t') (\w_R-\w_n) \right> + \frac{\gamma^2}{N} \left<\w_n^\top \bm\Sigma(t+1,t'+1) \w_n  \right> \label{eq:lc3},
+\end{align}
+where $\alpha = B/N$ and $Q_n(t,t') = \left< \Delta_n(t) \Delta_n(t') \right>$ is the correlation of randomly sampled TD-errors at episodic times $t,t'$ and iteration $n$. The average over weights $\left< \right>$ denotes a Gaussian average whose moments are related to $\M_n$.   The correlation function $Q_n(t,t')$ depends on $\M_n$ and the average weights $\left< \w_n \right>$; we provide its full formula in Appendix \ref{app:final_result}, equation \eqref{eq:Q_fn_M}. 
+\end{proposition}
+
+
+\begin{proof} The full derivation is in Appendix \ref{app:derivation_learn_curves}. At a high level, we track the moment generating function of the iterates $\w_n$ over random draws of features $\{\bm\psi_n^\mu(t) \}$, $Z[\{ \bm j_n \}] = \mathbb{E}_{\{\bm\psi_n^\mu(t) \}} \exp\left( i \sum_{n} \bm j_n \cdot \w_n \right) \propto \int \mathcal{D} q \exp\left( \frac{N}{2} S[q, \{ \bm j_n \}] \right)$ where $S$ is a $\mathcal{O}(1)$ action and $q$ are a set of order parameters of the theory which include the following overlaps
+$C_n(t,t') = \frac{1}{N} \w_n^\top \bm\Sigma(t,t') \w_n$ and $Q_n(t,t') = \frac{1}{B} \sum_{\mu=1}^B \Delta_n^\mu(t) \Delta^\mu_n(t')$.
+In this high dimension $N,B \to \infty$ limit with $B/N = \mathcal{O}(1)$ and episode length $T = \mathcal{O}(1)$, the order parameters can be obtained from saddle point integration, which requires solving $\frac{\partial S}{\partial q} = 0$. This procedure results in a deterministic learning curve given in equations \eqref{eq:lc1},\eqref{eq:lc2},\eqref{eq:lc3} even though the realization of sampled states are disordered. The TD-error variables $\Delta_n(t)$ become mean zero Gaussians and the $\{ \w_n \}$ also follow a Gaussian distribution with mean and variance determined by the order parameters.  
+\end{proof}
+
+
+% \newline
+% \begin{proposition}
+% Define matrices $\bm{\bar{\Sigma}} = \frac{1}{T} \sum_t \bm\Sigma(t,t) , \bm{\bar{\Sigma}}_+ = \frac{1}{T} \sum_t \bm\Sigma(t,t+1)$ and $\A = \bm{\bar \Sigma} - \gamma \bar{\bm\Sigma}_+$. Then the typical value estimation error after $n$ steps $\mathcal{L}_n$ has the form
+% \begin{align}
+%     \mathcal{L}_n & = \text{Tr} \bm{\bar\Sigma} \M_n \ , \ 
+%     \M_{n+1} = (\I - \eta \A) \M_n (\I - \eta \A)^\top + \frac{\eta^2}{B T^2} \sum_{tt'} Q_n(t,t') \bm \Sigma(t,t')  
+% \end{align}
+% where $Q_n(t,t') = \left< \Delta_n(t) \Delta_n(t') \right>$ is the correlation of randomly sampled TD-errors at episodic times $t,t'$ and iteration $n$. The correlation function $Q_n(t,t')$ depends on $\M_n$ and the average weights $\left< \w_n \right>$; we provide its full formula in Appendix \ref{app:final_result}. 
+% \end{proposition}
+
+Before we explore the predictions of this theory, we first make a few remarks about this result. 
+\begin{remark}
+Though the theory is technically derived for large batch size $B$, we will show that it provides an accurate description of the loss trajectory even for batches as small as $B=1$. An alternative formulation in terms of recursive averaging reveals transparently which approximations lead to the same result as the mean field theory (Appendix \ref{app:direct_iterate_averaging}). 
+\end{remark}
+\begin{remark}
+    The case where the reward function and/or the value function are inexpressible by the features $\bm\psi$ can also be handled within this framework. In this case, the unlearnable components of the value function act as additional noise which limits performance \cite{bordelon2022sgd}. These can also be handled by our theory, see Appendix \ref{app:convergence_considerations}.
+\end{remark}
+
+\begin{remark}
+    The limit where $\gamma = 0$ recovers known results in online supervised learning with stochastic gradient methods \cite{varre2021last, bordelon2022sgd, velikanov2023view}. In this limit, the dynamics will converge to zero loss provided the model features are sufficiently rich to represent the true value function. 
+\end{remark}
+
+\begin{remark}
+ The TD learner with perfect coverage (infinite batch size) at each step will converge to the ground truth $\w_{TD} = \left( \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right)^{-1} \bar{\bm\Sigma} \w_R$ (see Appendix \ref{app:convergence_considerations}). 
+\end{remark}
+
+%\begin{remark}
+%If the reward or value function cannot be fully explainable by the features, there will be unlearnable components. 
+%\end{remark}
+
+\begin{remark}
+$\M_n$ is equivalently defined as $\M_n = \left< (\w - \w_{TD})(\w-\w_{TD})^\top \right>_{\{\tau_{n'}^\mu \}_{n'<n}}$, which measures deviation from the fixed point of gradient flow (vanishing learning rate) dynamics $\w_{TD}$ over random sets of sampled episodes (Appendix \ref{app:derivation_learn_curves}).
+\end{remark}
+
+
+\subsection{Gaussian Approximation}
+
+The theory presented in Section \ref{sec:compute_learn_curves} relies on an approximation of the feature distribution as Gaussian. Similar approximations have been successfully utilized in high dimensional regression problems even when the true features are non-Gaussian \cite{bordelon2020spectrum, loureiro2021learning, hu2022universality, bordelon2022sgd}. We note that an exact, non-asymptotic theory for non-Gaussian features can be provided which closes under knowledge of the fourth cumulants of the features as we show in Appendix \ref{app:nongauss_full_th}, though this theory is especially cumbersome to analyze or evaluate compared to the theory of Section \ref{sec:compute_learn_curves}. Concretely, Proposition \ref{prop:full_result} relies on the following.
+
+\begin{geq_conjecture}
+The learning curves for a TD learner with high dimensional features $\{ \bm\psi(s_t) \}_{t=1}^T$ over random $\tau$ are well approximated by the learning curves of a TD learner trained with \textit{Gaussian} features $\bm\psi_{G} \sim \mathcal{N}(\bm\mu,\bm\Sigma + \bm\mu \bm\mu^\top)$ with matching mean and correlations 
+\begin{align}
+    \bm\mu(t) = \left< \bm\psi(s_t) \right>_{\tau \sim p(\tau)} \ , \quad 
+    \bm\Sigma(t,t') = \left< \bm\psi(s_t) \bm\psi(s_{t'})^\top \right>_{\tau \sim p(\tau)} .
+\end{align}
+where averages are taken over sequences of states $\{ s(t) \} \sim p(\tau)$. 
+\end{geq_conjecture}
+
+\begin{figure}[h]
+    \centering
+    \subfigure[2D Exploration]{\includegraphics[width=0.32\linewidth]{Figures/explore_2d_mdp_w_reward.pdf}}
+    \subfigure[Place Cell/RBF Features $\bm\psi(s_t)$]{\includegraphics[width=0.32\linewidth]{Figures/place_cell_2d.pdf}}
+    %\subfigure[Reward]{\includegraphics[width=0.24\linewidth]{Figures/reward_vis_2d.pdf}}
+    \subfigure[Equivalence Phenomenon]{\includegraphics[width=0.32\linewidth]{Figures/value_err_2d_explore_mdp_gaussequiv.pdf}}
+    \subfigure[Place Cell Bandwidths]{\includegraphics[width=0.32\linewidth]{Figures/place_fields_vary_BW_fourvals.pdf}}
+    \subfigure[Large batch $B=30$]{\includegraphics[width=0.32\linewidth]{Figures/vary_place_width_fourvals_2d_MDP_batch_40.pdf}}
+    \subfigure[Small batch $B=3$]{\includegraphics[width=0.32\linewidth]{Figures/vary_place_width_fourvals_2d_MDP_batch_3.pdf}}
+    \caption{An illustration of our theory for TD learning. (a) A diffusion process in a 2D grid world generates many possible trajectories through state space. Each colored line is a different trajectory. Reward function is shown in red, with darker red indicating higher reward. (b) When combined with nonlinear place cell feature representation, the state transitions generate a distribution over observed features $\{\bm\psi(s_t)\}$. (c) The value error associated with TD learning for a bump reward function on the true features generated from a single set of MDP trajectories (blue) is compared to training on sampled Gaussian vectors $\{\bm\psi_t\}$ with matching within-episode covariance structure. These single runs of TD learning on either set of features are consistent with the typical case theory (black dashed). (d) The structure of the features alters learning dynamics. We consider, for simplicity, altering the bandwidth (BW) of the place cell features. (e) Varying place cell BW changes the dynamics for both large batch ($B=30$) and (f) small batch ($B=3$) TD learning. There is an optimal BW for a given step size. Small batch stochastic semi-gradient noise is more severe.}
+    \label{fig:gauss_equiv_phenomenon}
+\end{figure}
+
+One interpretation of this ansatz is that the dependence of the learning curve on higher order cumulants of the features is negligible in high dimensional feature spaces under the square loss. This approximation has been shown to provide an accurate description on realistic supervised learning settings with non-Gaussian data with the square loss in prior works \cite{bordelon2020spectrum,loureiro2021learning, bordelon2022sgd, canatar, simon2022eigenlearning, varre2021last}. As shown in these works, for standard supervised learning, even highly non-Gaussian features $\{\bm\psi(s_t)\}$ have least squares learning curves which are only sensitive to the first two cumulants of the distribution. We do not aim to provide a rigorous proof of this ansatz for TD learning but instead compute the learning curve implied by this assumption and compare to experiments on simple Markov Decision Processes (MDPs). The benefit of this hypothesis in the RL setting is that it abstracts away details of transitions in the state space and instead deals with the correlations of sampled features through time. 
+
+To illustrate an example of the Gaussian Equivalence idea, in Figure \ref{fig:gauss_equiv_phenomenon}, we consider an MDP which is defined by diffusion through a 2-dimensional (2D) state space (Figure \ref{fig:gauss_equiv_phenomenon}(a)). We choose the features $\bm\psi(s)$ to be a collection of localized 2D Radial Basis Function (RBF) bumps which tile the 2D space, similarly to the ``place cell'' neurons found in the mammalian hippocampus \cite{o1976place,moser2008place} (Figure \ref{fig:gauss_equiv_phenomenon}(b)). The feature map is parameterized by the bandwidth of individual ``place cells''. In Figure \ref{fig:gauss_equiv_phenomenon}(c), we show the value error learning curve as a function of the number of steps $n$ (blue) and compare the value estimation error of the MDP with a Gaussian distribution for $\bm\psi(t)$ with matching first and second moments (orange). Lastly, we plot the theoretical prediction of our theory (described in Section \ref{sec:theory_TD}), which is computed under the Gaussian equivalence ansatz (black dashed). We see a remarkable match of the three curves. The equivalence can be used to predict the speed of TD learning for different features, such as place cells with varying bandwidth as we illustrated in Figure \ref{fig:gauss_equiv_phenomenon} (d)-(f). In Figure \ref{fig:gauss_equiv_phenomenon} (e) and (f), we plot the loss trajectories for a single run of TD for each feature set. We observe that bandwidth affects both the learning dynamics and the asymptotic error with an optimal bandwidth at any step. One of our goals will be to elucidate the role of feature quality in learning dynamics. While the large batch dynamics are approximately self-averaging, as shown by the fact that single runs of TD learning coincide with our theoretical typical case theory curves, there is significant semi-gradient variance in the value error at small batch sizes. While we expect Gaussian equivalence to hold for high dimensional features, in low dimensions non-Gaussian effects can significantly alter the learning curves as we show in Appendix \ref{app:gauss_breakdown}. However, for high dimensional features, the equivalence holds for many other feature distributions such as polynomial and fourier features (Appendix \ref{app:other_features}). 
+
+
+
+\section{Spectral Perspective on Hard Reward Functions}\label{sec:spectral}
+
+\begin{figure}[h]
+    \centering
+    \subfigure[Sparse $R_1$ or Dense $R_2$ Rewards]{\includegraphics[width=0.36\linewidth]{Figures/compare_reward_fns_visual.pdf}}
+    %\subfigure[Eigenvalues of $\bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+$]{\includegraphics[width=0.32\linewidth]{Figures/2D_mdp_eigenvals_vs_place_width.pdf}}
+    \subfigure[Code-Task Alignment]{\includegraphics[width=0.3\linewidth]{Figures/Ck_curves_vary_target_place_cell_2d_MDP.pdf}}
+    \subfigure[$B=20$ Learning Curves]{\includegraphics[width=0.3\linewidth]{Figures/vary_target_place_cell_2d_MDP_batch_10.pdf}}
+    \caption{Reward functions and dynamics which lead to value functions with high spectral alignment to the features can be learned more quickly than those that do not. (a) A sparse and dense reward function in a 2D spatial navigation task can illustrate this effect. (b) The cumulative power distribution $C(k)$ defined from the spectral decomposition of $\bm A = \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+$. Concretely we let $\bm A \u_k = \lambda_k \u_k$ with $\lambda_k$ ordered by real part and $\w_{TD} = \sum_k w_k \u_k$. In the $B\to\infty$ limit the task which has rapidly rising $C(k) = \frac{\sum_{\ell < k} w_\ell^2 }{ \sum_{\ell} w_\ell^2 }$ will converge more quickly than the task with slowly rising $C(k)$. (c) Indeed, for large batch regime ($B=20$) the value error decreases more rapidly for $R_2$ than for $R_1$.  }
+    \label{fig:sparse_vs_dense}
+\end{figure}
+
+Our theory can provide some insights into the structure of tasks which can be learned easily and which require more sampled trajectories to estimate based on spectral decompositions of the feature covariances. We note that similar spectral arguments have been given in the ODE-limit \cite{lyle_RL_dynamics} and are intimately related to the source conditions used in recent work to identify power-law rates in the large batch regime \cite{NEURIPS2022_32246544}.  
+
+To build our argument, we diagonalize the matrix $\A = \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+$, obtaining $\A \u_k = \lambda_k \u_k$, noting that eigenvalues $\lambda_k$ can be complex. We then expand the TD solution in this basis $\w_{TD} =\sum_k w_k \u_k$. The theory predicts that, the average learned weights will be $\left< \w_n \right> = \sum_k |1-\eta\lambda_k|^n e^{i \theta_k n } w_k \u_k$, where $|\cdot|$ is complex modulus and $\theta_k = \text{Arg}(1-\eta\lambda_k)$. We can therefore order the modes by their convergence timescales $|1-\eta\lambda_k|$. Given this ordering of timescales, we can order the modes $k$ from those with smallest to largest timescales. Given this ordering, we see that tasks can be learned efficiently are those with most of the norm of $\w_k$ in the modes with small timescales. We quantify how well aligned a task is to a given feature representation by computing a cumulative power distribution for the target weights $C(k) = \frac{\sum_{\ell < k} w_\ell^2}{\sum_\ell w_\ell^2}$. If this quantity rises rapidly with $k$ then the task can be learned from a small number of samples \cite{canatar}. 
+
+We consider again, the setting of Figure \ref{fig:gauss_equiv_phenomenon}, the 2D exploration MDP but now contrast two different reward functions. %Figure \ref{fig:sparse_vs_dense} (a) illustrates the difference between a sparse and dense reward function. 
+In Figure \ref{fig:sparse_vs_dense} we show that this spectral decomposition can account for the gaps in loss for a place cell code in learning a sparse or dense reward function (Figure \ref{fig:sparse_vs_dense}(a)). As expected the cumulative power rises more rapidly for the dense reward function $R_2(s)$ (Figure \ref{fig:sparse_vs_dense}(b)). As a consequence, the value error converges to zero more rapidly than for the sparse rewards. 
+
+
+\section{Stochastic Semi-Gradient Learning Plateaus and Annealing Strategies}\label{sec:plateaus_annealing}
+\begin{figure}[!h]
+    \centering
+    \subfigure[Episodic Batches]{\includegraphics[width=0.32\linewidth]{Figures/vary_batch_gauss_decoupled.pdf}}
+    \subfigure[Discount Factor]{\includegraphics[width=0.32\linewidth]{Figures/vary_gamma_gauss_decoupled.pdf}}
+    \subfigure[Fixed Learning Rate]{\includegraphics[width=0.32\linewidth]{Figures/vary_eta_gauss_decoupled.pdf}}
+    \subfigure[Annealed Learning Rate]{\includegraphics[width=0.32\linewidth]{Figures/vary_lr_sch_gauss_decoupled.pdf}}
+    \subfigure[Optimal Annealing]{\includegraphics[width=0.32\linewidth]{Figures/lr_sch_sweep_gauss_decoupled.pdf}}
+    \caption{ Finite batch size, discount factor and learning rate all contribute to a stochastic semi-gradient plateau in the TD dynamics. The features are generated from a synthetic power law covariance with exponential temporal autocorrelation (see Appendix \ref{app:numerical}). Dashed black lines are theory. In general, for fixed learning rate $\eta$, the plateau scales as $\mathcal{O}( \eta \gamma^2 B^{-1})$. (a) Larger batch sizes $B$ reduce SGD noise and leads to a lower plateau in the reducible value error for a decoupled power-law feature model. (b)  Larger discount factor $\gamma$ and (c) larger learning rate $\eta$ lead to higher SGD plateau floor. (d) An annealing strategy $\eta_n \sim \eta_0 n^{-\chi}$ for $\chi > 0$ can allow one to avoid the plateau. For slow annealing (small $\chi$), the error scales as $\mathcal{L}_n \sim \mathcal{O}( n^{-\chi} )$. (e) The value error as a function of the learning rate annealing exponent $\chi$ defined by $\eta_n = \eta_0 n^{-\chi}$. For this task, the optimal exponent balances the scale of the asymptote with the rate of convergence.  }
+    \label{fig:plateaus_annealing}
+\end{figure}
+
+The stochastic noise from TD learning has striking qualitative differences from SGD noise in the standard supervised case. In standard supervised learning (such as $\gamma=0$ version of this theory), the stochastic gradient noise does not prevent the model from fitting the target function with zero error provided the features are sufficiently rich to represent the target function. However, this is not the case in TD learning, where the predicted value $\hat{V}(s)$ is bootstrapped using the model's weights $\w_n$ at each iteration $n$. This leads to asymptotic plateaus in learning curves. Our theory can predict these plateaus and their scaling whose proof is given in Appendix \ref{app:scaling_fixedpt}.
+\begin{proposition}\label{prop:scaling}
+    %The fact that the plateau decreases as $B \to \infty$ or $\gamma \to 0$ or $\eta \to 0$ indicates that it is not due to an inability for the features to represent the target function, but rather arises from the stochastic semi-gradient noise of the TD updates. 
+    Our theoretical learning curves exhibit a fixed point for the value error dynamics for finite $B$ and non-zero $\eta$ and $\gamma$. For small $\frac{\eta \gamma^2}{B}$, we deduce that $\M$ satisfies a self-consistent asymptotic scaling of the form $\M = \mathcal{O}\left( \frac{\eta \gamma^2}{B} \right)$ impliying an asymptotic value error scaling of $\mathcal{L} \sim \frac{1}{N} \text{Tr} \M \bar{\bm\Sigma} \sim \mathcal{O}\left( \frac{\eta \gamma^2}{B} \right)$. 
+\end{proposition}
+% \begin{proof}
+% See Appendix \ref{app:scaling_fixedpt}. 
+% \end{proof}
+
+In Figure \ref{fig:plateaus_annealing}, we demonstrate that our theory predicts the plateaus and their scaling as a function of finite batch size $B$ (Figure \ref{fig:plateaus_annealing}(a)), non-zero discount factor $\gamma > 0$ (Figure \ref{fig:plateaus_annealing}(b)) and non-negligible learning rate (Figure \ref{fig:plateaus_annealing}(c)). 
+
+A strategy used in the literature to increase rates of convergence and improve asymptotic behavior is adaptation of the learning learning through an annealing schedule \cite{sutton2018reinforcement,jacobs1988increased,dabney2012adaptive, dalal2018finite}. To overcome this plateau in the loss, we consider annealing the learning rate $\eta_n$ with iteration $n$. In Figure \ref{fig:plateaus_annealing}(d), we show the effect of annealing the learning rate as a power law $\eta_n  =\eta_0 n^{-\chi}$ for some non-negative exponent $\chi$. For $\chi = 0$ the learning rate is constant and a fixed plateau is reached. For small nonzero $\chi$, such as $\chi=0.2$, the value error is, after an initial transient, always near its instantaneous fixed point plateau so the loss scales linearly with the learning rate, giving the asymptotic rate $\mathcal{L}_n \sim \mathcal{O}(n^{-\chi})$. For large $\chi$, the learning rate decreases very quickly and the plateau is never reached. Our approach can be used to find an optimal annealing exponent $\chi$ and in Figure \ref{fig:plateaus_annealing}(e), we show that the optimal annealing exponent balances these effects and is well predicted by our theory. 
+
+
+
+\section{Reward Shaping}\label{sec:reward_shaping}
+
+\begin{figure}
+    \centering
+    \subfigure[Geometry of Reward Shaping]{\includegraphics[width=0.37\linewidth]{Figures/Reward_shaping_concept.pdf}}
+    \subfigure[Scale-based Shaping]{\includegraphics[width=0.3\linewidth]{Figures/vary_rewardshape_gauss_decoupled.pdf}}
+    \subfigure[Rotation-based Shaping]{\includegraphics[width=0.3\linewidth]{Figures/vary_rewardshape_rotate_gauss_decoupled.pdf}}
+    \caption{The theory can be used to understand how reward shaping decisions alter temporal difference learning dynamics. (a) A visualization of possible reward shaping potentials $\phi(s)=\w_\phi \cdot \bm\psi(s)$ strategies in feature space. Probability density level curves for the features are depicted in blue. Reshaping with $\w_\phi = \beta \w_{TD}$ for scale factor $\beta$ merely changes the scale of weights which must be recovered (gold) and does not change timescales of TD dynamics. (b) The value error dynamics for the scale based reward shaping for the features in Figure \ref{fig:plateaus_annealing}. On the other hand, rotation based reward shaping where $\w_{\phi}$ is not parallel to $\w_V$ (red) leads to a potentially helpful mixture of timescales if the new target vector is more aligned with feature dimensions with high variance (purple). In (c), we plot loss curves for rotation angle $\theta$ between the original mode $\w_V$ and the top eigenvector of the feature covariance matrix $\bm{\bar \Sigma}$. Dashed black lines are theory.}
+    \label{fig:reward_shaping}
+\end{figure}
+
+Another strategy to improve the learning dynamics in reinforcement learning algorithms is reward shaping \cite{ng1999policy}. In standard supervised learning, the goal is to directly approximate the target objective given a cost function. However, in reinforcement learning, the objective is not to estimate rewards at each state directly but the discounted sum of future rewards, the value function. Importantly, many different reward schedules can lead to identical value functions. Reward shaping exploits this symmetry to speed up learning by altering the structure of TD updates and SGD noise. Here, we provide a theoretical description of the changes in the learning dynamics due to reward shaping which suggests they can be understood through a change of the alignment between the original rewards and the reshaped rewards in the space of the features used to represent the states. 
+
+The original ideas around reward shaping were inspired by work in experimental psychology and were closer to what is now studied as curriculum learning \cite{skinner1965science,gullapalli1992shaping,bengio2009curriculum}. Reward shaping as currently used in reinforcement learning directly changes the reward function by adding a potential-based shaping function $F$ such that $F(s_t,a,s_{t+1}) =\gamma \phi(s_{t+1})-\phi(s_t)$ \cite{ng1999policy}. In each step of the algorithm we feed the following \textit{reshaped rewards} $\tilde{R}$ to the TD learner
+\begin{align}
+    \tilde{R}(s_t) = \begin{cases}
+    R(s_t) - \gamma \phi(s_{t+1})  & t = 0
+    \\
+    R(s_t) + \phi(s_t) - \gamma \phi(s_{t+1})  & t > 0
+    \end{cases}.
+\end{align}
+We note that this transformation simply offsets the target value function by $\phi(s)$ as the series above telescopes with a cancellation of $\phi(s_t)$ between the $t-1$ and $t$-th terms \cite{ng1999policy} (see Appendix \ref{app:reward_shaping}). However, the dynamics of TD learning with these reshaped rewards $\tilde R$ is quite distinct from the dynamics with original rewards $R$. Here, we study the case where we can express $\phi(s)$ as a linear function of our features: $\phi(s) = \bm\psi(s) \cdot \w_{\phi}$. This leads to a change in the dynamics for $\M_n$ and $\left< \w_n \right>$ that we describe in the Appendix \ref{app:reward_shaping}. 
+
+In Figure \ref{fig:reward_shaping}, we illustrate the possible benefits of reward shaping. We explore two types of reward shaping. First, a scale based reward shaping where $\w_\phi$ is parallel to the target TD weights $\w_{TD}$. This merely changes the overall scale of the weights needed to converge in the dynamics, leading to similar timescales and an identical plateau for TD learning as we show in Figure \ref{fig:reward_shaping} (b). On the other hand, reward shaping which rotates the fixed point of the TD dynamics into directions of higher feature variance can improve timescales of convergence. In Figure \ref{fig:reward_shaping} (c), we show an example where we vary the angle $\theta$ of the shaped-TD fixed point (see also Appendix \ref{app:reward_shaping}). \looseness=-1 
+
+%First we show an example of shaping closer to the original ideas from experimental psychology. We nudge the state representation towards the reward location. Faster convergence but same plateau. 
+%Next, we use reward shaping to rotate the reward distribution onto a more favorable subspace from the point of view of the features. 
+%\textcolor{red}{discuss how you are supposed to subtract it off} 
+%\textcolor{red}{Explain the simulation / theory in the figure}
+%\subsection{Online vs Offline RL}
+%\textcolor{red}{contrast learning with fresh samples in online setting vs learning with same data over and over. Should agree as $\alpha \to \infty$. Discuss connection to experience replay. }
+%\textcolor{red}{I am not sure we have time for this... Solving the theory is more complicated than I expected.}
+%\section{Experimental validation }
+%\section{Predicting dynamics of value estimation in realistic environments}
+%\subsection{2-D grid worlds}
+%\subsection{Mountain Car}
+%Goal of this section: verify scaling of the plateau error at fixed learning rate as $\mathcal{O}(\eta\gamma^2 /B)$
+%\begin{itemize}
+%    \item Vary $\eta$ with $\gamma, B$ fixed and show $\mathcal{L}$ is linear in $\eta$
+%    \item Vary $\gamma^2$ with $\eta, B$ fixed and show quadratic in $\gamma$
+%    \item Vary $B$ with $\eta,\gamma$ fixed and show inverse dependence on $B$.
+%\end{itemize}
+%\textcolor{red}{Henry is working on this. Will see if we get something by tomorrow}
+
+\section{TD Learning Plateaus in More Realistic Settings}
+
+In this section, we test if some of the phenomena observed in our theory and experiments also hold in more realistic settings. We perform TD learning with Fourier features to evaluate a pre-trained policy on MountainCar-v0. As expected, we see that the value error plateaus to an error level determined by both the learning rate (Figure \ref{fig:mc}a) and batch size (Figure \ref{fig:mc}b) due to semigradient noise. 
+
+\begin{figure}[h]
+    \centering
+    \subfigure[Varying Learning Rates]{\includegraphics[width=0.42\linewidth]{Figures/mc-lr-value_error-low_res.pdf}}
+    %\subfigure[Asymptotic scaling of value error with learning rate ($\eta$)]{\includegraphics[width=0.35\linewidth]{Figures/mc-lr-line.pdf}}
+    \subfigure[Varying Batch Sizes]{\includegraphics[width=0.42\linewidth]{Figures/mc-b-value_error-low_res.pdf}}
+    %\subfigure[Asymptotic scaling of value error with batch size ($B$)]{\includegraphics[width=0.4\linewidth]{Figures/mc-b-line.pdf}}
+    \\
+    %\subfigure[\(V^*\) learned with Tabular Q-Learning]{\includegraphics[width=0.24\linewidth]{Figures/mc-v_q.pdf}}
+    %\subfigure[\(V^\pi\) TD Converged Value Function]{\includegraphics[width=0.24\linewidth]{Figures/mc-v.pdf}}
+    \caption{Policy evaluation in MountainCar-v0 environment. The policy was learned with tabular \(\epsilon\)-greedy Q-learning (see Appendix \ref{app:mountain_car} for details). (a) Value error curves for different \(\eta\) when \(B = 1\). (b) Value error curves for different \(B\) with \(\eta = 0.1\). Shaded area denotes 95\% confidence interval over 10 seeds. % Plots were logarithmically subsampled for faster plotting.
+    }
+    \label{fig:mc}
+\end{figure}
+We show that the plateaus obey the predicted scalings of $\mathcal{O}(\eta B^{-1})$ in Appendix \ref{app:mountain_car}.
+
+\section{Discussion}
+
+Our work presents a new approach using concepts from statistical physics to derive average-case learning curve for \textit{policy evaluation} in TD-learning. However, it is only a first step towards a new theory of learning dynamics in reinforcement learning. 
+
+One major limitation of the present work is that it concerns linear function approximation where the features representing states/actions are fixed throughout learning. This limit can apply to neural networks in the ``lazy'' regime of training \cite{chizat2019lazy, jacot}, however it cannot account for neural networks that adapt their internal representations to the structure of the reward function. This differs from the setting of most practical algorithms, including in deep reinforcement learning, that specifically adapt their representations. 
+%Future work could explore how agents with nonlinear function approximators such as deep neural networks adapt their representations during TD learning. 
+
+Our theory provides a description of learning dynamics through a set of iterative equations (Proposition \ref{prop:full_result}). In Figure \ref{fig:gauss_equiv_phenomenon} we evaluate these dynamics for a simple MDP but although the predicted dynamics present an excellent fit to the empirical simulations, the iterative equations can be difficult to interpret and computationally expensive to evaluate in a larger network and more realistic tasks. Nevertheless, our equations can be used to derive some scaling between key parameters of the algorithm for example by studying their fixed points as in Proposition \ref{prop:scaling}. 
+%Expanding this set of analysis by exploring the behavior of the iterative equations in various limits and validating our theory in large scale networks will be important future work to ensure that this theory can help guide design principle for reinforcement learning algorithms. 
+
+ Here, we considered the simplest form of temporal difference learning, batched online TD(0). In future work, it will be important to further characterize the behavior for online TD(0) with batch size $B=1$ and to expand our approach to TD($\lambda$) and other return distributions. Similarly, expanding our theory to the offline setting, in which the buffer of resampled trajectories would be of finite size, could provide an understanding of how the interactions between parameters govern convergence and divergence \cite{sutton2018reinforcement,van2018deep,levine2020offline,perdomo2022sharp}. \looseness=-1 
+
+Another limitation of our work is that we only considered the setting of \textit{policy evaluation} with a fixed policy. The goal of an RL agent is to learn how to act in the work and not merely to represent the value is its states. Unlike in supervised learning, the changes in the value function affect the policy but in many of RL algorithms, for example in \textit{actor-critic} architecture, there is a separation of the \textit{policy evaluation} (critic) and the \textit{policy learning} (actor) \cite{konda1999actor,mnih2016asynchronous}. Such algorithms estimate the value associated with state/action pairs under a given policy and then use this information to make beneficial updates to the policy, usually with the value and policy functions approximated by separate neural networks. In this paper, we only treated the first part of this process. Recently, a related approach has been used to analyse the dynamics of \textit{policy learning} in an ``RL perceptron" setup \cite{patel2023rl}. A full theory of reinforcement learning combining \textit{policy evaluation} and \textit{policy learning} remains difficult due to the interaction between the two processes, but combining these approaches would be fruitful. One promising direction is in settings where the timescales of the two processes are different \cite{konda2004convergence}, such as when \textit{policy learning} occurring at a much slower rate which is often the case in practice. \looseness=-1 
+
+Beyond developing a theory of learning dynamics in reinforcement learning, the approach could be used in neuroscience to understand how neural representation of space or value can shape the learning dynamics at the behavioral level. Ideas from reinforcement learning have been extremely influential to understand phenomena observed in neuroscience and have been mapped directly onto specific brain circuits \cite{schultz1997neural,doya2008modulators,behrens2018cognitive}. The place cells of the hippocampus \cite{o1976place} exhibit localized tuning as the example in Figure \ref{fig:gauss_equiv_phenomenon} and together with grid cells in enthorinal cortex are thought to be crucial for navigation in spatial and cognitive spaces and their tuning  is shaped by experience \cite{moser2008place,behrens2018cognitive,stachenfeld2017hippocampus,sosa2021navigating}. Our theory specifically link the structure of representations, policy and reward to learning rates, which can all be experimentally measured simultaneously and could shed on light on how the spectral properties of representations govern learning and navigation \cite{mcnamee2021flexible,behrens2018cognitive}, similarly to how the mean field theories we have used here can explain learning of sensory features \cite{bordelon2022population}. Future work could straightforwardly extend this DMFT formalism to deal with replay of sampled experiences during TD learning \cite{fedus2020revisiting} at the cost of tracking correlations of weight updates across iterations of the algorithm \cite{mignacco2020dynamical}. 
+
+To summarize, our work provide a new promising direction towards a theory of learning dynamics in reinforcement learning in artificial and biological agents. \looseness=-1 
+
+\begin{ack}
+BB is supported by a Google PhD Fellowship. CP and BB were supported by NSF grant DMS-2134157. CP is further supported by NSF CAREER Award IIS-2239780, and a Sloan Research Fellowship.   PM was supported by NIH grant 5R01DC017311 to Venkatesh Murthy and Naoshige Uchida. HK was supported by the Harvard College Research Program. This work has been made possible in part by a gift from the Chan Zuckerberg Initiative Foundation to establish the Kempner Institute for the Study of Natural and Artificial Intelligence. We thank Jacob Zavatone-Veth for useful discussions and comments on this manuscript. 
+\end{ack}
+
+\clearpage
+
+\bibliography{mybib}
+
+\clearpage 
+
+\appendix 
+
+% Restart page numbering for appendices
+\setcounter{page}{1}
+\renewcommand*{\thepage}{S\arabic{page}}
+
+% Number equations within appendices as A.1, A.2, ...
+\numberwithin{equation}{section}
+\numberwithin{figure}{section}
+\section*{Appendix}
+
+\numberwithin{figure}{section}
+
+
+\section{General Convergence Considerations for MDPs in Finite State Space}\label{app:convergence_considerations}
+
+In this section, we will discuss the infinite batch limit and compare the value function obtained with TD to the ground truth value function. We will, for simplicity, consider in this section a Markov reward process with transition matrix $p(s_{t+1}=s'|s_t=s) = \Pi(s,s')$. The general theory described in the main text does not only apply to MDPs, but the convergence analysis for MDPs is much more straightforward so we describe it here. In this case, the ground truth value function satisfies
+\begin{align}
+    V(s) = R(s) + \gamma \sum_{s'} \Pi(s,s') V(s')
+\end{align}
+which gives the vector equation $\bm V = \left( \I - \gamma \bm\Pi \right)^{-1} \bm R$ for $\bm V, \bm R \in \mathbb{R}^{|\mathcal S|}$. Suppose the limiting distribution over states is $\bm p \in \mathbb{R}^{|\mathcal S|}$ which has entries $p(s) = \frac{1}{T} \sum_{t=1}^T p(s_t = s)$. The fixed point of TD dynamics is
+\begin{align}
+    \bm\Psi \text{diag}(\bm p) \bm\Psi^\top \w_{TD} = \bm\Psi \text{diag}(\bm p)  \bm R + \gamma \bm\Psi \text{diag}(\bm p) \bm\Pi \bm\Psi^\top \w_{TD} .
+\end{align}
+We now consider the two possible cases for this fixed point condition.
+
+\paragraph{Case 1: Underparameterized Regime}
+First, if the feature dimension $N$ is smaller than the size of the state space $|\mathcal S|$ and the features are maximal rank, then the TD learning fixed point is
+\begin{align}
+    \w_{TD} = \left( \bm\Psi \text{diag}(\bm p) \bm\Psi^\top - \gamma \bm\Psi \text{diag}(\bm p) \bm\Pi \bm\Psi^\top \right)^{-1}  \bm\Psi \text{diag}(\bm p) \bm R
+\end{align}
+
+In this case, the value function is not learned perfectly, as can be seen by computing $\hat{\bm V} = \bm\Psi^\top \w_{TD}$ and comparing to the ground truth $\bm V = \left( \bm I - \gamma \bm \Pi \right)^{-1} \bm R$. In this case, we would say that TD learning has an \textit{irreducible value error} due to capturing only a $N$ dimensional projection of the value function. 
+
+\paragraph{Case 2: Overparameterized Regime}
+Alternatively, if the feature dimension exceeds the total number of states, then the fixed point equation for TD is underspecified. However, throughout TD learning $\w_{TD} \in \text{span}\{ \bm\psi(s) \}_{s\in\mathcal S}$ so we can instead consider the decompostion $\w_V = \sum_{s} \alpha(s) \bm\psi(s)$, where $\bm\alpha \in \mathbb{R}^{|\mathcal S|}$ satisfies
+\begin{align}
+    \text{diag}(\bm p) (\I - \gamma \bm\Pi) \bm K \bm\alpha = \text{diag}(\bm p) \bm R
+\end{align}
+where $\bm K \in \mathbb{R}^{|\mathcal S| \times |\mathcal S|}$ is the kernel computed with features $K(s,s') = \bm\psi(s) \cdot \bm\psi(s')$. The solution to the above equation is unique and the learned value function $\hat{\bm V} = \bm\Psi^\top \w_{TD} = \bm K \bm K^{-1} \left( \bm I - \gamma \bm\Pi\right)^{-1} \bm R = \left( \bm I - \gamma \bm\Pi \right)^{-1} \bm R = \bm V$. Therefore, in the over-parameterized limit, the irreducible value error for TD learning is zero. This limit was considered dynamically in the infinite batch (vanishing SGD noise) setting by \cite{lyle_RL_dynamics}.
+
+\section{Derivation of Learning Curves}\label{app:derivation_learn_curves}
+
+In this section, we now consider the dynamics of TD learning when $B$ random episodes are sampled at a time. In this calculation, the finite batch of episodes leads to non-negligible SGD effects which can cause undesirable plateaus in TD dynamics. 
+
+\subsection{Field Theory Derivation}
+
+In this section we use a Gaussian field theory formalism to compute the learning curve in the high dimensional asymptotic limit $N,B\to\infty$ with $B/N = \alpha$. The episode length $T$ is treated as $\mathcal{O}(1)$. While this paper focuses on the online setting, where fresh trajectories $\{ \tau^\mu_n \}$ are sampled at each iteration $n$, this model can be straightforwardly extended to the case where a fixed number of experience trajectories $\{ \tau^\mu \}$ are replayed repeatedly during TD learning. We leave the experience replay dynamic mean field theory calculation for future work. The starting point of our analysis is tracking the moment generating function for the iterate dynamics
+\begin{align}
+    Z[\{\bm j_n\}] = \mathbb{E}_{\{\w_n \}, \{s^\mu_n(t)\}} \exp\left( i \sum_{n=0}^\infty \bm j_n \cdot \w_n \right).
+\end{align}
+To compute this object over random draws of training trajectories, we express the joint average over $\w_n, \{s^\mu_n(t) \}$ into conditional averages over $\w_n, \{ \Delta^\mu_n(t) \}|\{\bm\psi^\mu_n(t)\} $. To simplify the computation, in this section, we will compute the learning curve for mean zero features $\bm\mu(s) = 0$ and 
+\begin{align}
+    Z =& \mathbb{E}_{\{\bm\psi^\mu_n(t)\}} \int  \prod_{n} d\w_n \delta\left( \w_{n+1} - \w_{n} - \frac{\eta}{\sqrt{B} T} \sum_{\mu t} \Delta_n^\mu(t) \bm\psi^\mu_n(t) \right)\exp\left( i \sum_{n=0}^\infty \bm j_n \cdot \w_n \right) \nonumber
+    \\
+    &\times \int \prod_{t\mu n} d\Delta^\mu_n(t) \ \delta\left( \Delta^\mu_n(t) - \frac{1}{\sqrt N} (\w_R-\w_n) \cdot \bm\psi^\mu_n(t) - \frac{\gamma}{\sqrt N} \w_{n} \cdot \bm\psi^\mu_n(t+1) \right)
+\end{align}
+Expressing the Dirac-delta function as a Fourier integral $\delta(z) = \int \frac{d\hat{z}}{2\pi} \exp\left( i \hat{z} z \right)$ for each of our constraints. Under the \textit{Gaussian equivalence ansatz}, we can easily average over Gaussian $\bm\psi$ to obtain 
+\begin{align}
+    Z& = \int \mathcal D\Delta \mathcal D\hat{\Delta} \mathcal D\w \mathcal D\hat{\w} \exp\left( - \frac{\eta^2}{2 B T^2} \sum_{n \mu }  \sum_{tt'}  \Delta_n^\mu(t) \Delta_n^\mu(t') \hat{\w}_n^\top \bm\Sigma(t,t') \hat{\w}_n \right) \nonumber
+    \\
+    &\exp\left( i \sum_n \hat{\w}_n \cdot (\w_{n+1}-\w_n)  \right)\nonumber
+    \\
+    &\exp\left( - \frac{1}{2 N} \sum_{n\mu tt'} \left[ (\w_R-\w_n) \hat\Delta^\mu_n(t)  \right] \bm\Sigma(t,t')  \left[ (\w_R-\w_n) \hat\Delta^\mu_n(t')  \right] \right) \nonumber
+    \\
+    &\exp\left( -\frac{\gamma^2}{2N} \sum_{n\mu tt'} \hat{\Delta}^\mu_n(t-1) \hat{\Delta}^\mu_n(t'-1) \w_n^\top  \bm\Sigma(t,t')  \w_n  \right) \nonumber
+    \\
+    &\exp\left( - \frac{\gamma}{N} \sum_{n\mu t t'}\hat{\Delta}^\mu_n(t-1) \hat{\Delta}^\mu_n(t') \w_n^\top  \bm\Sigma(t,t') (\w_R - \w_n)   \right)
+    \nonumber
+    \\
+    &\exp\left( -  \frac{\eta}{\sqrt{N B}  T} \sum_{n \mu tt'} \left[  \hat\Delta^\mu_n(t) (\w_R-\w_n) + \gamma  \hat{\Delta}^\mu_n(t-1) \w_n \right]^\top \bm\Sigma(t,t') \hat{\w}_n \Delta_n^\mu(t') \right) \nonumber
+    \\
+    &\exp\left(  i \sum_{n\mu t} \hat\Delta^\mu_n(t) \Delta^\mu_n(t) +    i \sum_n \bm j_n \cdot\w_n  \right)
+\end{align}
+where we adopted the shorthand $\mathcal D \Delta = \prod_{\mu, n, t} d\Delta^\mu_n(t)$ for the measure for the collection of variables $\{ \Delta^\mu_n(t) \}$. Likewise one should interpret $\mathcal D \w = \prod_{n} d\w_n$. To analyze the high dimensional limit of the above moment generating function, we introduce order parameters for the theory
+\begin{align}
+    Q_n(t,t') &= \frac{1}{B} \sum_{\mu=1}^B \Delta^\mu_n(t) \Delta^\mu_n(t') \ , \ C_n(t,t') = \frac{1}{N} \w_n^\top \bm\Sigma(t,t') \w_n \nonumber
+ \\ 
+ C_n^{R}(t,t') &= \frac{1}{N} \w_R \bm\Sigma(t,t') \w_n  
+ \ ,  \ 
+ D_n(t,t') = -  \frac{i}{N} \hat{\w}_n^\top \bm\Sigma(t,t') \w_n \ , \ D_n^R(t,t') =  -  \frac{i}{N} \hat{\w}_n^\top \bm\Sigma(t,t') \w_R 
+\end{align}
+For each of these order parameters, we enforce the definition of the order parameter using the Fourier representation of a Dirac-delta function 
+\begin{align}
+    1 &= B \int dQ_n(t,t') \delta\left( B Q_n(t,t') - \sum_\mu \Delta_n^\mu(t) \Delta_n^\mu(t') \right) \nonumber
+    \\
+    &= B \int \frac{dQ_n(t,t') d\hat{Q}_n(t,t')}{4\pi i } \exp\left( \frac{B}{2} \hat{Q}_n(t,t') Q_n(t,t') - \frac{1}{2} \sum_\mu \Delta^\mu_n(t) \Delta^\mu_n(t') \hat{Q}_n(t,t')  \right) .
+\end{align}
+Repeating this procedure for all order parameters $q = \{ Q, \hat{Q}, C, \hat{C}, C^R, \hat{C}^R, D, \hat{D}, D^R ,\hat{D}^R \}$ and disregarding irrelevant prefactors, we have the following formula for the moment generating function
+\begin{align}
+    Z \propto \int \mathcal D q \exp\left( \frac{N}{2} S[q] \right)
+\end{align}
+where the action $S$ has the form
+\begin{align}
+    S = \sum_{n} \sum_{tt'} &\left[ \alpha Q_n(t,t') \hat{Q}_n(t,t') + C_n(t,t') \hat{C}_n(t,t') +  C^R_n(t,t') \hat{C}^R_n(t,t') \right] \nonumber
+    \\
+    - 2 \sum_{n} \sum_{tt' } &\left[  D_n(t,t') \hat{D}_n(t,t') + D_n^R(t,t') \hat D_n^R(t,t')  \right] + \frac{2}{N} \ln \mathcal{Z}_w + 2 \alpha \ln \mathcal{Z}_\Delta \nonumber
+    \\ 
+    \mathcal Z_w = \int \mathcal{D} \w \mathcal{D} \hat{\w} &\exp\left( - \frac{\eta^2}{2 T^2} \sum_{n tt'} Q_n(t,t') \hat{\w}_n^\top \bm\Sigma(t,t') \hat{\w}_n + i \sum_{n} \hat{\w}_n \cdot (\w_{n+1}-\w_n)  \right) \nonumber
+    \\
+    &\exp\left( - \frac{1}{2} \sum_{n tt'} \hat{C}_n(t,t') \w_n^\top \bm\Sigma(t,t') \w_n - \frac{1}{2} \hat{C}_n^R(t,t') \w_R^\top \bm\Sigma(t,t') \w_n  \right) \nonumber
+    \\
+    &\exp\left( - i \sum_{n tt'} \hat{D}_n(t,t') \hat{\w}_n^\top \bm\Sigma(t,t') \w_n - i \sum_{n tt'} \hat{D}^R_n(t,t') \hat{\w}_n^\top \bm\Sigma(t,t') \w_R \right)  \nonumber
+    \\
+    \mathcal Z_\Delta = \int \mathcal D \Delta \mathcal D \hat\Delta &\exp\left( - \frac{1}{2} \sum_{n tt'} \hat{Q}_n(t,t') \Delta_n(t) \Delta_n(t')+ i \sum_{nt}\hat\Delta_n(t) \Delta_n(t)\right) \nonumber
+    \\
+    &\exp\left( - \frac{1}{2} \sum_{n tt'} \hat\Delta_n(t) \hat\Delta_n(t') \left[ \frac{1}{N} \w_R^\top \bm\Sigma(t,t') \w_R + C(t,t') \right] \right) \nonumber
+    \\
+    &\exp\left(  \frac{1}{2} \sum_{n tt'} \hat\Delta_n(t) \hat\Delta_n(t') \left[ C^R(t,t') + C^R(t',t)  \right] \right) \nonumber
+    \\
+    &\exp\left( - \gamma \sum_{t,t'} \hat\Delta_n(t) \hat\Delta_n(t'-1)  C_n^R(t,t')   \right)  \nonumber
+    \\
+    &\exp\left( - \frac{\gamma^2}{2} \sum_{t,t'}   \hat\Delta_n(t-1) \hat\Delta_n(t'-1) C_n(t,t') \right) \nonumber
+    \\
+    &\exp\left( - \frac{\eta i }{\sqrt{\alpha} T} \sum_{ n t,t'} \hat\Delta_n(t) \left[ D_n^R(t',t) - D_n(t',t) + \gamma D_n(t',t+1) \right] \Delta_n(t')   \right) 
+\end{align}
+The function $\mathcal Z$ has the interpretation of an effective partition function conditional on order parameters $q$. To study the $N \to \infty$ limit, we use the steepest descent method and analyze the saddle point $\frac{\partial S}{\partial q} = 0$. These saddle point equations give
+\begin{align}
+    \frac{\partial S}{\partial \hat Q_n(t,t') } &= \alpha Q_n(t,t') - \alpha \left< \Delta_n(t) \Delta_n(t') \right> = 0 \nonumber
+    \\
+    \frac{\partial S}{\partial  Q_n(t,t') } &= \alpha \hat Q_n(t,t') - \frac{\eta^2}{T^2 N} \left< \hat{\w}_n^\top \bm\Sigma(t,t') \hat{\w}_n \right> = 0 \nonumber
+    \\
+    \frac{\partial S}{\partial \hat C_n(t,t')} &= C_n(t,t') - \frac{1}{N} \left< \w_n^\top \bm\Sigma(t,t') \w_n  \right> = 0  \nonumber
+    \\
+    \frac{\partial S}{\partial  C_n(t,t')} &= \hat C_n(t,t') - \alpha \left< \hat\Delta_n(t) \hat\Delta_n(t') + \gamma^2 \hat\Delta_n(t-1) \hat\Delta_n(t'-1) \right> = 0  \nonumber
+    \\
+    \frac{\partial S}{\partial \hat C_n^R(t,t')} &= C_n^R(t,t') - \frac{1}{N} \left< \w_R^\top \bm\Sigma(t,t') \w_n  \right> = 0  \nonumber
+    \\
+    \frac{\partial S}{\partial  C_n(t,t')} &= \hat C_n(t,t') - \alpha \left< \hat\Delta_n(t) \hat\Delta_n(t') + \gamma \hat\Delta_n(t) \hat\Delta_n(t'-1) \right> = 0  \nonumber
+    \\
+    \frac{\partial S}{\partial \hat D_n(t,t')} &= - 2 D_n(t,t') -   \frac{2i }{N} \left< \hat{\w}_n^\top \bm\Sigma(t,t') \w_n \right> = 0 \nonumber
+    \\
+     \frac{\partial S}{\partial \hat D_n^R(t,t')} &= - 2 D_n^R(t,t') -   \frac{2i}{N} \left< \hat{\w}_n^\top \bm\Sigma(t,t') \w_n \right> = 0 \nonumber
+     \\
+     \frac{\partial S}{\partial D_n(t,t')} &= -2 \hat D_n(t,t') - \frac{2\alpha \eta i}{\sqrt{\alpha} T} \left< \gamma \hat\Delta_n(t-1) \Delta_n(t') - \hat\Delta_n(t) \Delta_n(t') \right> = 0 \nonumber
+    \\
+    \frac{\partial S}{\partial D_n^R(t,t')} &= -2 \hat D_n^R(t,t') - \frac{2\alpha \eta i}{\sqrt{\alpha} T} \left<  \hat\Delta_n(t) \Delta_n(t') \right> = 0
+\end{align}
+The brackets $\left< \right>$ denote averaging over the stochastic processes defined by moment generating functions $\mathcal{Z}_\Delta, \mathcal{Z}_w$. After these saddle point equations are solved the order parameters $q$ are treated as non-random and a Hubbard-Stratonovich transformation is employed. For example, 
+\begin{align}
+    &\exp\left( - \frac{1}{2} \hat{\w}_n \left[ \frac{\eta^2}{T^2} \sum_{tt'} Q_n(t,t') \bm\Sigma(t,t') \right] \hat{\w}_n  \right)
+    = \mathbb{E}_{\bm u^w_n} \exp\left( i \sum_n  \bm u^w_n \cdot \hat{\w}_n \right)
+\end{align}
+where the average is over $\bm u^w_n \sim \mathcal{N}\left(0, \eta^2 T^{-2} \sum_{tt' } Q_n(t,t') \bm\Sigma(t,t') \right)$. After introducing these Hubbard fields $\u^w_n$ and $u^\Delta_n(t)$, we can perform the integrals over $\hat{\w}_n$ and $\hat\Delta_n(t)$ which collapse to Dirac-Delta functions. The resulting identities of the delta functions define the following stochastic processes on $\w_n$ and $u_n^\Delta$
+\begin{align}
+    \w_{n+1} &= \w_n + \u^w_n + \sum_{t t'} \hat{D}^R_n(t,t') \bm\Sigma(t,t') \w_R + \sum_{t,t'} \hat{D}_n(t,t') \bm\Sigma(t,t') \w_n \nonumber
+    \\
+    \Delta_n(t) &= u_n^\Delta(t) + \frac{\eta}{\sqrt{\alpha} T} \sum_{t t'} [ D_n^R(t,t') - D_n(t,t') - \gamma D_n(t',t+1) ] \Delta_n(t') .
+\end{align}
+
+Using a similar trick, we can show that for any observable depending on $\w_n$ or $\{\Delta_n(t)\}$ that
+\begin{align}
+    &- i \left< \hat{\w}_n O(\w_n)  \right> = \left< \frac{\partial}{\partial \u_n} O(\w_n) \right> \nonumber
+    \\
+    &- i \left<  \hat{\Delta}_n(t) O(\{ \Delta_n(t') \})  \right> = \left< \frac{\partial}{\partial u^\Delta_n(t)} O(\{ \Delta_n(t') \}) \right>
+\end{align}
+Since $\w_n$ is independent. This can be used to conclude
+\begin{align}
+    D_n(t,t') = 0 \ , \ D_n^R(t,t') = 0   
+\end{align}
+which implies that $\Delta_n(t) = u^\Delta_n(t)$. Consequently the response functions have trivial structure
+\begin{align}
+    \hat{D}_n(t) = - \frac{\eta  \sqrt{\alpha}}{ T} \left[ \delta(t-t') - \gamma \delta(t-1-t') \right] \ , \ \hat{D}^R_n(t,t') = \frac{\sqrt{\alpha} \eta}{T} \delta(t-t') .
+\end{align}
+We therefore obtain a stochastic process of the form 
+\begin{align}
+    \w_{n+1} &= \w_n + \u^w_n + \frac{\eta \sqrt{\alpha}}{T} \sum_{t} \bm\Sigma(t,t) \w_R - \frac{\eta \sqrt{\alpha}}{T} \sum_{t}  \left[ \bm\Sigma(t,t) - \gamma \bm\Sigma(t,t+1) \right] \w_n \nonumber
+    \\
+    \u_n &\sim \mathcal{N}\left(0, \frac{\eta^2}{T^2} \sum_{tt'} Q_n(t,t') \bm\Sigma(t,t') \right) \ , \ \{\Delta_n(t)\} \sim \mathcal{N}(0, \bm Q_n )  \nonumber
+    \\
+    Q_n(t,t') &= \left< \Delta_n(t) \Delta_n(t') \right> = \frac{1}{N} \w_R \bm\Sigma(t,t') \w_R - C^R(t,t') - C^R(t',t) + C(t,t') \nonumber
+    \\
+    C_n(t,t') &= \frac{1}{N} \left< \w_n^\top \bm\Sigma(t,t') \w_n \right> \nonumber
+    \ , \  C_n^R(t,t') = \frac{1}{N} \left< \w_R^\top \bm\Sigma(t,t') \w_n \right>  
+\end{align}
+These are the final equations defining the stochastic evolution of $\w_n$ and $\Delta_n(t)$. 
+
+\subsection{Simplifying the Saddle Point Equations}
+
+Using the above saddle point equations, we see that the variables $\{ \Delta_n(t) \}$ and $\{ \w_n \}$ will be Gaussian random variables. It thus suffices to track their mean and covariance. The $\{ \Delta_n(t) \}$ variables have zero mean and covariance given by the $Q_n(t,t')$ function. The $\{ \w_n \}$ variables have the following mean evolution
+\begin{align}
+    \left< \w_{n+1} \right> &= \left<\w_n \right> + \eta \sqrt{\alpha}  \left[ \bar{\bm\Sigma} \w_R - \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \left< \w_n \right> \right] \nonumber
+    \\
+    &= \left<\w_n \right> + \eta \sqrt{\alpha} \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \left[ \w_{TD}  - \left< \w_n \right> \right]
+\end{align}
+where $\w_{TD} = \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right]^{-1} \bar{\bm\Sigma} \w_R$ is the fixed point of the TD dynamics. We next compute $\M_n = \left< \left( \w_n - \w_{TD} \right) \left( \w_n - \w_{TD} \right)^\top \right>$ which admits the recursion
+\begin{align}
+    \M_{n+1} = \left( \I - \eta \sqrt{\alpha} \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \right) \M_n \left( \I - \eta \sqrt{\alpha} \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \right) + \frac{\eta^2}{T^2} \sum_{tt'} Q_{n}(t,t') \bm\Sigma(t,t')
+\end{align}
+To obtain our formulas which hold for finite batch size, we rescale the learning rate by $\eta \to \eta / \sqrt{\alpha}$ giving the following evolution
+\begin{align}
+    \left< \w_{n+1} \right> &= \left<\w_n \right> + \eta \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \left[ \w_{TD}  - \left< \w_n \right> \right] \nonumber
+    \\
+    \M_{n+1} &= \left( \I - \eta   \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \right) \M_n \left( \I - \eta \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \right)^\top + \frac{\eta^2}{T^2 \alpha^2} \sum_{tt'} Q_{n}(t,t') \bm\Sigma(t,t')
+\end{align}
+After this rescaling, we see that the mean evolution for $\w_n$ is independent of $\alpha$ but that the variance picks up an additive term on each step on the order of $\mathcal{O}(\eta^2 \alpha^{-2})$ which vanishes in the infinite batch limit $B/N \to \infty$. The error for value learning can be obtained from $\M_n$ with $\mathcal L_n = \frac{1}{N} \text{Tr} \M_n \bar{\bm\Sigma}$. Lastly, we note that we can express the formula for $Q_n(t,t')$ entirely in terms of $\M_n$ and $\left< \w_n \right>$. This gives the lengthy expression 
+\begin{align}\label{eq:Q_fn_M}
+    Q_n(t,t')  &= \frac{1}{N} \left< (\w_R-\w_n)^\top \bm\Sigma(t,t') (\w_R-\w_n) \right> + \frac{\gamma }{N} \left<(\w_R-\w_n)^\top \bm\Sigma(t,t'+1)\w_n  \right> \nonumber
+    \\
+    &+ \frac{\gamma}{N} \left<\w_n^\top \bm\Sigma(t+1,t') (\w_R-\w_n) \right> + \frac{\gamma^2}{N} \left<\w_n^\top \bm\Sigma(t+1,t'+1) \w_n  \right> \nonumber
+    \\
+    &= \frac{1}{N} \text{Tr}\M_n \bm\Sigma(t,t') + \frac{1}{N} \left( \w_{TD} -  \left< \w_n \right> \right) \left[ \bm\Sigma(t,t') +\bm\Sigma(t',t) \right] \left( \w_{R} - \w_{TD} \right) \nonumber
+    \\
+    &+ \frac{1}{N}\left( \w_{R} - \w_{TD} \right)^\top \bm\Sigma(t,t')\left( \w_{R} - \w_{TD} \right) \nonumber
+    \\
+    &- \frac{\gamma}{N} \text{Tr} \M_n \left[ \bm\Sigma(t,t'+1) + \bm\Sigma(t+1,t') \right] \nonumber
+    \\
+    &+ \frac{\gamma}{N} \left(\w_{TD} - \left<\w_n \right> \right) \left[ \bm\Sigma(t,t'+1) + \bm\Sigma(t+1,t') \right] \w_{TD} \nonumber
+    \\
+    &+ \frac{\gamma}{N} (\w_R-\w_{TD})^\top \left[ \bm\Sigma(t,t'+1) + \bm\Sigma(t+1,t') \right] \left< \w_n \right> \nonumber
+    \\
+    &+ \frac{\gamma^2}{N} \text{Tr} \M_n \bm\Sigma(t+1,t'+1) + \frac{2\gamma^2}{N} \left( \left< \w_n \right> - \w_{TD} \right) \bm\Sigma(t+1,t'+1) \w_{TD} \nonumber
+    \\
+    &+ \frac{\gamma^2}{N} \w_{TD}^\top \bm\Sigma(t+1,t'+1) \w_{TD}
+\end{align}
+
+\subsection{Final Result}\label{app:final_result}
+
+Below we state in compact form the full final result for our TD learning curves. The below equations give the evolution of the first and second moments of $\w_n$ obtained from the mean-field density of the previous section. Concretely, these moments obey dynamics
+\begin{align}
+    \left< \w_{n+1} \right> &= \left< {\w}_n \right> + \eta \left[ \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+ \right] \left[ \w_V - \left< \w_n \right> \right] \nonumber
+    \\
+    \M_{n+1} &= \left[ \I - \eta \bar{\bm\Sigma} +\eta\gamma  \bar{\bm\Sigma}_+ \right] \M_n \left[ \I - \eta \bar{\bm\Sigma} +\eta\gamma  \bar{\bm\Sigma}_+ \right]^\top  + \frac{\eta^2}{\alpha^2 T^2} \sum_{tt'} Q_n(t,t') \bm\Sigma(t,t') \nonumber
+    \\
+    Q_n(t,t') &= \frac{1}{N} \left< (\w_R-\w_n)^\top \bm\Sigma(t,t') (\w_R-\w_n) \right> + \frac{\gamma }{N} \left<(\w_R-\w_n)^\top \bm\Sigma(t,t'+1)\w_n  \right> \nonumber
+    \\
+    &+ \frac{\gamma}{N} \left<\w_n^\top \bm\Sigma(t+1,t') (\w_R-\w_n) \right> + \frac{\gamma^2}{N} \left<\w_n^\top \bm\Sigma(t+1,t'+1) \w_n  \right> . 
+\end{align}
+These equations can be solved iteratively for $\bar{\w}_n , \M_n, Q_n$. Finite dimensional versions of this result can be obtained by replacing $\alpha$ with $B/N$ as written in the main text. The value estimation error is
+\begin{align}
+    \mathcal{L}_n = \frac{1}{N} \text{Tr} \M_n \bar{\bm\Sigma}.
+\end{align}
+
+\subsection{Non-Zero Mean Feature}\label{app:nonzero_mean_features}
+
+We can also simply modify the DMFT equations if the mean feature is nonvanishing $\bm\mu(s) \neq 0$. In this case, when averaging over all possible trajectories through state space, there is a mean feature vector at each episodic time $\bm\mu(t)$. The above equations are exact for non-zero mean features if $\bm\Sigma(t,t')$ is regarded as the (non-centered) correlation matrix $\left< \bm\psi(t) \bm\psi(t') \right>$. 
+
+\subsection{Action Dependent Rewards}\label{app:action_dep_rewards}
+
+
+\subsubsection{Expected Q-Learning Reduces to Previous Model}
+
+In the case where we consider using features that depend on both states and actions $\bm\psi(s,a)$ then we can use expected value learning to identify the expected value of a state-action pair under policy $\pi$
+\begin{align}
+    V(s,a) = R(s,a) + \gamma \left< V(s',a') \right>_{s',a' | s,a}
+\end{align}
+This $V$ function quantifies the expected reward associated with taking action $a$ when in state $s$ and subsequently following policy $\pi$. This problem is structurally identical to the state dependent case by recognizing that state action pairs $(s,a)$ act as new states $\tilde{s}$. As before, the policy defines the probability distribution over transitions on $\tilde{s}$. We can thus use Equation \eqref{eq:lc1} to calculate the learning curve for this problem.
+
+\subsubsection{Action Dependence Generates Target Noise in State Dependent Value Learning}
+
+In the case where the rewards depend on both state and action $R(s,a)$ but features only depend on state $\bm\psi(s)$, we need a slight modification of our theory which models the reward at each state as a mean value (over actions) plus a noise. For each state, we decompose the reward function into mean and fluctuation
+\begin{align}
+    R(s,a) = \bar{R}(s) + \epsilon(s,a) \ , \ \bar{R}(s) = \mathbb{E}_{a \sim \pi(a|s)} R(s,a)
+\end{align}
+The function $\bar{R}(s)$ can again be decomposed into the basis of features $\bm\psi(s)$. However, we need to consider the correlation structure of $\epsilon(s,a)$. 
+\begin{align}
+    \mathbb{E}_{\tau} \epsilon(s_t,a_t) \epsilon(s_{t'},a_{t'}) &= \mathbb{E}_{s_t} \mathbb{E}_{a_t | s_t} \epsilon(s_t,a_t)  \left[ \mathbb{E}_{s_{t'}|s_t,a_t} \left(\mathbb{E}_{a_{t'}|s_{t'}} \epsilon(s_{t'},a_{t'}) \right) \right] \nonumber
+    \\
+    &= \delta_{t,t'} \text{Var}_{a|s_t} R(s_t,a) .
+\end{align}
+The above average vanishes for $t \neq t'$ since $\epsilon(s_{t'},a_{t'})$ is zero mean over $a|s$. We introduce the notation $\sigma^2_t = \text{Var}_{a|s_t} R(s_t,a)$. Thus, we effectively have a model where our TD errors obey
+\begin{align}
+    \Delta(t) = \bar{R}(s_t) + \epsilon(s_t,a_t) + \gamma \hat{V}(s_t) - \hat{V}(s_t)
+\end{align}
+The addition of this term leads to a simple modification of our $Q(t,t)$ function 
+\begin{align}
+    Q_n(t,t') &= \frac{1}{N} \left< (\w_R-\w_n)^\top \bm\Sigma(t,t') (\w_R-\w_n) \right> + \frac{\gamma }{N} \left<(\w_R-\w_n)^\top \bm\Sigma(t,t'+1)\w_n  \right> \nonumber
+    \\
+    &+ \frac{\gamma}{N} \left<\w_n^\top \bm\Sigma(t+1,t') (\w_R-\w_n) \right> + \frac{\gamma^2}{N} \left<\w_n^\top \bm\Sigma(t+1,t'+1) \w_n  \right> \nonumber
+    \\
+    &+ \delta_{t,t'} \sigma^2_t.
+\end{align}
+This change to the $Q_n(t,t')$ correlation function alters the dynamics of $\M_n$. Lastly, our population risk for the value estimation takes the form
+\begin{align}
+    \mathcal{L}_n = \frac{1}{N}\text{Tr} \M_n \bar{\bm\Sigma} + \frac{1}{T} \sum_{t} \sigma^2_t
+\end{align}
+where $\frac{1}{T} \sum_{t} \sigma^2_t$ exactly quantifies the variance in rewards unexplained by state-dependent features. 
+
+
+\subsection{Tracking Iterate Moments with Direct Recurrence Relation}\label{app:direct_iterate_averaging}
+
+In this section we give a direct calculation of the first two moments of $\w$ over the collection of randomly sampled features $\{ \bm\psi^\mu_n(t)\}$ and show which terms are disregarded in the proportional limit examined in the main text. 
+
+Letting $\bm A = \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+$, we note that the average evolution of $\w$ has the form
+\begin{align}
+    \left< \w_{n+1} \right> = \left( \bm\Sigma - \gamma \bm\Sigma_+ \right) \left( \w_{TD} - \left< \w_n \right> \right)
+\end{align}
+Thus, if we disregarded fluctuations in $\w_n$ due to SGD, the model will converge to the correct fixed point. Next, we look at $\bm M_n = \left< \left( \w_n - \w_{TD} \right) \left( \w_n - \w_{TD} \right) \right>$. Under the Gaussian equivalence ansatz, we have 
+\begin{align}
+    \M_{n+1} &= \M_n - \eta \A \M_n - \eta \M_n \A^\top + \frac{\eta^2}{T^2 B^2} \sum_{\mu\nu t t'} \left< \Delta^\mu_n(t) \Delta^\nu_n(t') \bm\psi^\mu_n(t) \bm\psi^\nu_n(t') \right> \nonumber
+    \\
+    &= (\I -\eta \A) \M_n(\I-\eta \A)^\top - \frac{\eta^2}{B} \A \M_n \A^\top + \frac{\eta^2}{T^2 B} \sum_{tt'} \left< \Delta_n(t) \Delta_n(t') \bm\psi(t) \bm\psi(t')^\top \right> \nonumber
+    \\
+    &= (\I -\eta \A) \M_n(\I-\eta \A)^\top + \frac{\eta^2}{T^2 B} \sum_{tt'} Q_n(t,t') \bm\Sigma(t,t')  \nonumber
+    \\
+    &+ \frac{\eta^2}{T^2 B} \sum_{tt'} \left< \Delta_n(t') \bm\psi(t) \right> \left< \Delta_n(t) \bm\psi(t')^\top \right> 
+\end{align}
+The mean field theory derived from saddle point integration consists of the first two terms in the final expression. Therefore mean field theory disregards the last term which computes cross time correlations of RPEs with features, effectively making the approximation
+\begin{align}
+    \frac{\eta^2}{T^2 B} \sum_{tt'} \left< \Delta_n(t') \bm\psi(t) \right> \left< \Delta_n(t) \bm\psi(t')^\top \right> \approx 0 .
+\end{align}
+After making this approximation, we recover the learning curve obtained in the previous Section \ref{app:final_result}. We show in our experiments that dropping this term does not significantly alter the learning curves. 
+
+\subsection{Scaling of Asymptotic Fixed Points}\label{app:scaling_fixedpt}
+
+To identify fixed points in the value error dynamics, we can seek non-vanishing fixed points for the weight error covariance $\M = \left< ({\w} - \w_{TD}) ({\w}-\w_{TD}) \right>$. We note that $\left< \w \right> \sim \w_{TD}$ asymptotically. Again, letting $\A = \bar{\bm\Sigma} - \gamma \bar{\bm\Sigma}_+$, we obtain the following fixed point condition for $\M$ under these assumptions
+\begin{align}
+     \A \M + & \M \A^\top - \eta \A \M \A^\top = \frac{\eta}{B T^2} \sum_{tt'} Q(t,t') \bm\Sigma(t,t') \nonumber
+    \\
+    Q(t,t') &= \text{Tr}\M \bm\Sigma(t,t') - \gamma \text{Tr} \M \left[ \bm\Sigma(t,t'+1) + \bm\Sigma(t+1,t') \right] + \gamma^2 \text{Tr} \M \bm\Sigma(t+1,t'+1) \nonumber
+    \\
+    &+ \gamma^2 \w_{TD}^\top \bar{\bm\Sigma}^{-1} \bar{\bm\Sigma}_+ \bm\Sigma(t,t') \bar{\bm\Sigma}_+ \bar{\bm\Sigma}^{-1} \w_{TD}  + \gamma^2 \w_{TD}^\top \bm\Sigma(t+1,t'+1) \w_{TD} \nonumber
+    \\
+    &+ \gamma^2 \w_{TD} \bar{\bm\Sigma}^{-1} \bar{\bm\Sigma}_+ \left[ \bm\Sigma(t,t'+1) + \bm\Sigma(t+1,t') \right] \w_{TD} .
+\end{align}
+Where we used the formula for $Q_n(t,t')$ from Appendix \ref{app:direct_iterate_averaging}, evaluated at $\left< \w \right> = \w_{TD}$ and used the fact that $\w_R = \w_{TD} - \gamma \bar{\bm\Sigma}^{-1} \bar{\bm\Sigma}_+ \w_{TD}$. 
+The solution $\M = 0$ is a valid fixed point for $\M$ in the $\eta \to 0$ and $B \to \infty$ limits because the constant terms on the right-hand side vanish. Similarly, if $\gamma = 0$ (which corresponds to the standard supervised learning case), the right hand side is linear in $\M$, allowing $\M = 0$ to be a valid fixed point. 
+
+However, for finite $B$ and non-zero $\eta$ and $\gamma$, there exists a solution to the above fixed point equation. For small $\frac{\eta \gamma^2}{B}$, we can deduce that $\M$ must satisfy a self-consistent asymptotic scaling of the form
+\begin{align}
+    \M = \mathcal{O}\left( \frac{\eta \gamma^2}{B} \right)
+\end{align}
+implying an asymptotic value error scaling of $\mathcal{L} \sim \text{Tr} \M \bar{\bm\Sigma} \sim \mathcal{O}\left( \frac{\eta \gamma^2}{B} \right)$. These scalings are examined in Figure \ref{fig:plateaus_annealing} where experiments obey the expected behavior.
+
+\section{Reward Shaping}\label{app:reward_shaping}
+
+In this section, we consider the role of reward shaping on the dynamics of TD learning. As discussed in the main text, we consider potential based shaping with potential function decomposable in the features $\phi(s) = \w_\phi \cdot \bm\psi(s)$. We first describe the change to the average weight evolution $\left< \w_n \right>$ and then describe the dynamics of the correlations. In potential based shaping, the TD errors take the form
+\begin{align}
+    \Delta(t) = R(s(t)) + \phi(s(t)) - \gamma \phi(s(t+1)) + \gamma \hat{V}(s(t+1)) - \hat{V}(s(t))
+\end{align}
+Computing from the DMFT equations the evolution of $\left< \w_n \right>$ we have
+\begin{align}
+    \left< \w_{n+1} \right> &= \left< \w_n \right> + \eta \bar{\bm\Sigma} (\w_R + \w_\phi - \left< \w_n \right> )  + \gamma \eta \bar{\bm\Sigma}_+ ( \left<\w_n\right> - \w_\phi ) \nonumber
+    \\
+    &= \left<\w_n\right> - \eta \A \left[ \w_{TD} + \w_\phi  - \left<\w_n\right>  \right] .
+\end{align}
+We see that including the reward shaping function $\phi$ offsets the fixed point of the algorithm to be $\w_{TD} + \w_\phi$. This occurs precisely because the potential-based reward shaping generates an additive correction to the target value function by $\phi(s)$ \cite{ng1999policy}. When we predict value at evaluation, we use the reshifted value $\hat V(s) - \phi(s)$. The natural quantity to track at the level of the mean field equations is the adapted version of $\M_n$
+\begin{align}
+    \M_n = \left< \left( \w_n - \w_{TD} - \w_\phi \right) \left( \w_n - \w_{TD} - \w_\phi \right)^\top \right> .
+\end{align}
+This correlation matrix has dynamics
+\begin{align}
+    \M_{n+1} = \left( \I - \eta \A \right) \M_n \left( \I - \eta \A \right)^\top + \frac{\eta^2}{B T^2} \sum_{tt'} Q_n(t,t') \bm\Sigma(t,t')    
+\end{align}
+and the TD-error correlations $Q_n(t,t')$ have the form
+\begin{align}
+    Q_n(t,t') =& \left< (\w_R + \w_\phi - \w_n)^\top \bm\Sigma(t,t') (\w_R + \w_\phi - \w_n) \right> \nonumber
+    \\
+    &+ \gamma \left< (\w - \w_\phi)^\top \left[ \bm\Sigma(t,t') + \bm\Sigma(t',t) \right](\w_R + \w_\phi - \w_n) \right> \nonumber
+    \\
+    &+\gamma^2  \left< (\w_n - \w_\phi )^\top \bm\Sigma(t+1,t'+1) (\w_n - \w_\phi) \right>
+\end{align}
+The value estimation error is again $\mathcal{L}_n = \text{Tr} \M_n \bar{\bm\Sigma}$. We see that the two primary ways that reward shaping alters the loss dynamics is
+\begin{itemize}
+    \item A change in the initial condition for $\M_n$ to be $\M_0 = (\w_{TD} + \w_\phi)(\w_{TD} + \w_\phi)^\top$
+    \item A change in the TD error covariance term $Q_n(t,t')$
+\end{itemize}
+Both effects can generate significant changes in the dynamics and plateaus of the model. 
+
+
+\section{Non-Gaussian Features}\label{app:nongauss_full_th}
+
+The full non-asymptotic theory (no assumptions on $N,B$ large) of TD dynamics with linear function approximation closes under the fourth moments of the features. In this setting we do not incorporate explicit factors of $N$ in the defintion of the value estimator $\hat{V}(t) = \w \cdot \bm\psi(t)$. As before, we track the update to the $\M$ matrix
+\begin{align}
+    \M_{n+1} &= \M_n - \eta \A \M_n - \eta \M_n \A^\top + \frac{\eta^2 (B - 1)}{B} \A \M_n \A^\top \nonumber
+    \\
+    &+ \frac{\eta^2}{B} \sum_{tt'} \left< \Delta_n(t) \Delta_n(t') \bm\psi(t) \bm\psi(t')^\top  \right>
+\end{align}
+To calculate the last term, we introduce the following tensor of fourth moments
+\begin{align}
+    \kappa^4_{i j k l}(t_1,t_2,t_3,t_4) =& \left< \psi_i(t_1) \psi_j(t_2) \psi_k(t_3) \psi_l(t_4) \right> 
+\end{align}
+In the Gaussian case, this reduces to an expression involving only the correlations. For example, if the features are zero mean, then we can use Wick's theorem to obtain the decomposition
+\begin{align}
+    \kappa^{4,Gauss}_{i j k l}(t_1,t_2,t_3,t_4) = \Sigma_{ij}(t_1,t_2) \Sigma_{kl}(t_3,t_4) + \Sigma_{ik}(t_1,t_3) \Sigma_{jl}(t_2,t_4) + \Sigma_{ij}(t_1,t_2) \Sigma_{kl}(t_3,t_4)
+\end{align}
+Now, using the fact that $\Delta_n(t) = (\w_R - \w_n) \cdot \bm\psi(t) + \gamma \w_n \cdot \bm\psi(t+1)$, we find 
+\begin{align}
+    &\left< \Delta_n(t) \Delta_n(t') \psi_i(t) \psi_j(t')^\top  \right>  \nonumber
+    \\
+    &= \left< \psi_i(t) \psi_j(t') \  \bm\psi(t)^\top (\w_R - \w_n) (\w_R-\w_n)^\top \bm\psi(t') \right>  \nonumber
+    \\
+    &+ \gamma \left< \psi_i(t) \psi_j(t') \  \bm\psi(t)^\top (\w_R - \w_n) \w_n^\top \bm\psi(t'+1) \right>  \nonumber
+    \\
+    &+\gamma \left< \psi_i(t) \psi_j(t') \  \bm\psi(t+1)^\top \w_n (\w_R - \w_n)^\top \bm\psi(t') \right>  \nonumber
+    \\
+    &+\gamma^2 \left< \psi_i(t) \psi_j(t') \  \bm\psi(t+1)^\top \w_n \w_n^\top \bm\psi(t'+1) \right>
+\end{align}
+Putting this all together, we find the following recurrence for $\M_n$ in the non-Gaussian case
+\begin{align}
+    \M_{n+1} &= \M_n - \eta \A \M_n - \eta \M_n \A^\top + \frac{\eta^2 (B - 1)}{B} \A \M_n \A^\top \nonumber
+    \\
+    &+ \frac{\eta^2}{B T^2} \sum_{t,t'} \text{Tr} \bm\kappa(t,t',t,t') \left< (\w_R -\w_n)(\w_R-\w_n)^\top \right> \nonumber
+    \\
+    &+ \frac{\gamma \eta^2 T^2}{B}\sum_{t,t'} \text{Tr} \ \bm\kappa(t,t',t,t'+1) \left< \w_n (\w_R -\w_n)^\top \right> \nonumber
+    \\
+    &+ \frac{\gamma \eta^2}{B T^2}\sum_{t,t'} \text{Tr} \  \bm\kappa(t,t',t+1,t') \left<  (\w_R -\w_n) \w_n^\top \right> \nonumber
+    \\
+    &+ \frac{\gamma^2 \eta^2}{B T^2} \sum_{t,t'} \text{Tr} \ \bm\kappa(t,t',t+1,t'+1) \left<  \w_n \w_n^\top \right>
+\end{align}
+where all traces are taken against the last two time and feature indices. The averages over the weights close in terms of the average $\left< \w_n \right>$ and the covariance $\M_n$. This equation is exact for any feature distribution, but requires significant computational resources to evaluate and is less illuminating than the mean field limit analyzed in the previous sections. 
+
+\subsection{Breakdown of Gaussian Theory in Low Dimension}\label{app:gauss_breakdown}
+
+In this section, we discuss the breakdown of Gaussian theory at low dimension $N$. In Figure \ref{fig:nongauss_vs_gauss_td_lowdim} we provide an example where the non-Gaussian distributions exhibit noticeably different learning curves than the Gaussian approximate theory (dashed black) and Gaussian samples with matching covariance (dashed color). We use the features 
+
+\begin{figure}[h]
+    \centering
+    \subfigure[$B=5$]{\includegraphics[width=0.4\linewidth]{Figures/gauss_vs_nongauss_TD_vary_N.pdf}}
+    \subfigure[$N = 100$]{\includegraphics[width=0.4\linewidth]{Figures/gauss_vs_nongauss_TD_vary_batch.pdf}}
+    \caption{The Gaussian theory can break down for non-Gaussian features in low dimension $N$. Illustration of the possible gap between Gaussian and non-Gaussian performance in the power law features of Figure \ref{fig:plateaus_annealing} and defined in Appendix \ref{app:numerical}. (a) The learning curves for batchsize $B=5$ and varying dimension $N$. As $N$ increases the gap between the non-Gaussian experiment (solid) and the Gaussian theory (black dashed) decreases.   }
+    \label{fig:nongauss_vs_gauss_td_lowdim}
+\end{figure}
+
+
+\subsection{A Simple Solveable Example}
+
+We next examine a very simple case where we can exactly characterize the gap between the non-Gaussian and Gaussian distributions. In this section, we examine the special case of $T=1$ and look at features which are independent $p(\bm\psi) = \prod_{i=1}^N p(\psi_i)$ (form a factor distribution). In this case, we obtain the following exact learning curve
+\begin{align}
+    \mathcal{L}_n = \left[ (1-\eta)^2 + \frac{\eta^2(N+1+\kappa)}{B} \right]^n \ , \ \kappa = \left< \psi^4 \right> - 3 \left< \psi^2 \right>^2
+\end{align}
+which holds for any $N,B$. We note that in the limit where $N,B \to \infty$ with $B/N = \alpha$, we see that the dependence on $\kappa$ disappears and we arrive at the universal behavior
+\begin{align}
+    \mathcal L_n \sim \left[ (1-\eta)^2 + \frac{\eta^2 }{ \alpha }  \right]^n   \ , \ N,B \to \infty 
+\end{align}
+For example, we can consider vectors on the hypercube where $\psi_k \in \{ \pm 1 \}$ with equal probability for $k \in \{1,...,N\}$ for the non-Gaussian distribution and compare to the Gaussian with identical covariance $\bm\psi \sim \mathcal{N}(0,\I)$. 
+\begin{align}
+    \mathcal{L}_n = \begin{cases}
+        \left[ (1-\eta)^2 + \frac{\eta^2 (N+1)}{B} \right]^n &  \text{Gaussian} \ \bm\psi
+        \\
+        \left[ (1-\eta)^2 + \frac{\eta^2 (N-1)}{B} \right]^n & \text{Hypercube} \ \bm\psi
+    \end{cases}
+\end{align}
+The reason for the discrepancy between the Gaussian and Bernoulli/Hypercube loss curves is exactly the negative kurtosis of the hypercube features
+\begin{align}
+    &\kappa_{\text{Gauss}} = 0 \nonumber
+    \\
+    &\kappa_{\text{Bernoulli}} - 3 \Sigma^2_{\text{Bernoulli}} = \left< \psi^4 \right> - 3 \left< \psi^2 \right>^2 = - 2
+\end{align}
+An example of this result for low and high dimensions $N$ with $B = \alpha N$ with $\alpha = 0.1$ is provided in Figure \ref{fig:sgd_low_vs_high}. In low dimension ($N=10$) the Bernoulli/Hypercube feature have noticeably different dynamics than the Gaussian features.  In the proportional limit $N,B \to \infty$ with $\alpha = B/N$ these learning curves are identical and all have the form $\mathcal L_n \sim \left[ (1-\eta)^2 + \frac{\eta^2}{\alpha} \right]^n $. 
+
+
+\begin{figure}[h]
+    \centering
+    \subfigure[Low Dimension]{\includegraphics[width=0.45\linewidth]{Figures/bernoulli_vs_gauss_N_10.pdf}}
+    \subfigure[High Dimension]{\includegraphics[width=0.45\linewidth]{Figures/bernoulli_vs_gauss_N_500.pdf}}
+    \caption{A simple explicitly solveable case shows how non-Gaussian corrections appear at finite size but disappear in the proportional limit where $N,B \to \infty$ with $\alpha = B/N = \mathcal{O}(1)$.  }
+    \label{fig:sgd_low_vs_high}
+\end{figure}
+
+\section{Tests on Other Feature Distributions}\label{app:other_features}
+
+In this section, we include additional tests of our theory on alternative features with the same random walk policy as in Figure \ref{fig:gauss_equiv_phenomenon}. 
+\begin{figure}[h]
+    \centering
+\subfigure[Polynomial features]{\includegraphics[width=0.425\linewidth]{Figures/poly_features_random_walk_vs_degree.pdf}}
+    \subfigure[Fourier Features]{\includegraphics[width=0.425\linewidth]{Figures/fourier_features_random_walk_vs_scale.pdf}}   \caption{In this Figure, we simulate the same random walk policy on the 2D grid world but use other types of features beyond RBF place cells. Learning dynamics are still accurately described by our theory. (c) The polynomial basis over states with random powers is constructed as $\psi_i(s_1,s_2) = s_1^{c_{i,1}} s_2^{c_{i,2}}$ where $c_{i,1}, c_{i,2}$ are chosen at random from $\{0,1,..., k\}$ where $k$ is the degree. (f) Fourier features with spectral power density $\frac{1}{1+\sigma^2 (k_1^2 + k_2^2)}$, where $\sigma$ is the scale/bandwidth.   }
+    \label{fig:enter-label}
+\end{figure}
+
+\section{Plateau Scaling in MountainCar-v0 Environment}\label{app:mountain_car}
+
+We verified the results of the theory on the environment MountainCar-v0. First, we train a policy with tabular \(\epsilon\)-greedy Q-Learning (\(\epsilon = 0.1, \gamma = 0.99, \eta = 0.01\)) to learn policy \(\pi\). The position and velocity are discretized into 42 and 28 states, respectively. The learned policy \(\pi\) is not optimal but consistently reaches goal within 350 timesteps. Therefore, each episode is set to have a length of 350 timesteps. Next, we take \(\pi\) and evaluate it with TD learning.
+
+Since MountainCar-v0 is a continuous environment, there is no closed solution to the ground truth of the value function. To estimate the ground truth value function, we ran TD learning with a small learning rate for 10M batches (\(\eta = 0.01, B = 1, \gamma = 0.99\)) to obtain \(V^\pi \approx \hat{V}_{10M}\).
+
+\begin{figure}[h]
+    \centering
+    \subfigure[\(V^*\) estimated with tabular \(\epsilon\)-greedy Q-Learning]{\includegraphics[width=0.36\linewidth]{Figures/mc-v_q.pdf}}
+    \subfigure[\(V^\pi\) TD Converged Value Function]{\includegraphics[width=0.36\linewidth]{Figures/mc-v.pdf}}
+    %\subfigure[Varying Learning Rates]{\includegraphics[width=0.24\linewidth]{Figures/mc-lr-value_error-low_res.pdf}}
+    \subfigure[Scaling of value error with learning rate]{\includegraphics[width=0.4\linewidth]{Figures/mc-lr-line.pdf}}
+    %\subfigure[Varying Batch Sizes]{\includegraphics[width=0.24\linewidth]{Figures/mc-b-value_error-low_res.pdf}}
+    \subfigure[Scaling of value error with batch size]{\includegraphics[width=0.4\linewidth]{Figures/mc-b-line.pdf}}
+    \\
+    %\subfigure[\(V^*\) learned with Tabular Q-Learning]{\includegraphics[width=0.24\linewidth]{Figures/mc-v_q.pdf}}
+    %\subfigure[\(V^\pi\) TD Converged Value Function]{\includegraphics[width=0.24\linewidth]{Figures/mc-v.pdf}}
+    \caption{Simulation in a MountainCar-v0 environment. (a) Value function learned by Tabular Q-Learning that approximates the value function of an optimal policy. (b) An example value function of a policy (\(V^\pi\)) learned by TD learning. Notice that the value function does not equate to that in (a) due to the policy \(\pi\) not reaching all states in the environment. (c-d) Linear scaling of convergence value error with the learning rate and the inverse of batch size. Target value function is the same across both experiments. Each dot represents a different seed. A total of 10 seeds were used. (c) Convergence value errors were computed by averaging the 100k batches before batch 10M. (d) Convergence value errors were computed by averaging the 100k batches before batch 1M.}
+    \label{fig:mc-appendix}
+\end{figure}
+
+
+\section{Numerical methods and additional details}\label{app:numerical}
+
+The code to generate the Figures is provided in the Supplementary Material as a Jupyter Notebook at the following Github repository \url{https://github.com/Pehlevan-Group/TD-RL-dynamics}. Here, we briefly highlight some of the parameter choices. 
+
+For Figures \ref{fig:plateaus_annealing} and \ref{fig:reward_shaping} we use diagonally decoupled, but temporally correlated power law features with $\Sigma_{k\ell}(t,t') = \delta_{k\ell} \  k^{-1.2} \exp\left(- |t-t'|/\tau_k \right)$ with $\tau_k = \frac{10}{k+1}$ and $w^{R}_k = k^{-1.1}$ for $k \in [N]$ with $N = 300$. This type of feature structure is especially easy to evaluate the theoretical learning curves for. Unless otherwise stated, these figures used $\gamma = 0.9$ and batch size $B=10$.
+
+For the 2D MDP grid world, we defined a discrete set of states on a $17 \times 17$ grid. The agent starts in the middle position and follows a random diffusion policy where each possible movement (up, down, left, right) is taken with equal probability. The features were generated as bell-shaped place cells (shown). We computed $\bm\Sigma(t,t')$ for the theory by sampling $5000$ random draws of length $T= 50$. The Gaussian learning curve is obtained with TD learning with $\bm\psi_G \sim \mathcal{N}(0,\bm\Sigma)$. 
+
+Numerical experiments were performed on a NVIDIA SMX4-A100-80GB GPU using JAX to vectorize repetitive aspects of the experiments. With the exception of the MountainCar-v0 simulations, the numerical experiments (both preliminary experiments and those presented in the paper) took around $1$ hour of compute time. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
