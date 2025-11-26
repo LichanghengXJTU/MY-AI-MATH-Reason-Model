@@ -1,0 +1,2204 @@
+The Annals of Applied Probability
+2004, Vol. 14, No. 2, 796–819
+DOI: 10.1214/105051604000000116
+c Institute of Mathematical Statistics, 2004
+
+arXiv:math/0405287v1 [math.PR] 14 May 2004
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE
+STOCHASTIC APPROXIMATION1
+By Vijay R. Konda and John N. Tsitsiklis
+Massachusetts Institute of Technology
+We study the rate of convergence of linear two-time-scale stochastic approximation methods. We consider two-time-scale linear iterations driven by i.i.d. noise, prove some results on their asymptotic covariance and establish asymptotic normality. The well-known result
+[Polyak, B. T. (1990). Automat. Remote Contr. 51 937–946; Ruppert,
+D. (1988). Technical Report 781, Cornell Univ.] on the optimality of
+Polyak–Ruppert averaging techniques specialized to linear stochastic
+approximation is established as a consequence of the general results
+in this paper.
+
+1. Introduction. Two-time-scale stochastic approximation methods [Borkar
+(1997)] are recursive algorithms in which some of the components are updated using step-sizes that are very small compared to those of the remaining components. Over the past few years, several such algorithms have been
+proposed for various applications [Konda and Borkar (1999), Bhatnagar,
+Fu, Marcus and Fard (2001), Baras and Borkar (2000), Bhatnagar, Fu and
+Marcus (2001) and Konda and Tsitsiklis (2003)].
+The general setting for two-time-scale algorithms is as follows. Let f (θ, r)
+and g(θ, r) be two unknown functions and let (θ ∗ , r ∗ ) be the unique solution
+to the equations
+(1.1)
+
+f (θ, r) = 0,
+
+g(θ, r) = 0.
+
+The functions f (·, ·) and g(·, ·) are accessible only by simulating or observing a stochastic system which, given θ and r as input, produces F (θ, r, V )
+and G(θ, r, W ). Here, V and W are random variables, representing noise,
+whose distribution satisfies
+f (θ, r) = E[F (θ, r, V )],
+
+g(θ, r) = E[G(θ, r, W )]
+
+∀ θ, r.
+
+Received March 2002; revised March 2003.
+Supported by NSF Grant ECS-9873451.
+AMS 2000 subject classification. 62L20.
+Key words and phrases. Stochastic approximation, two-time-scales.
+1
+
+This is an electronic reprint of the original article published by the Institute of
+Mathematical Statistics in The Annals of Applied Probability, 2004, Vol. 14, No.
+2, 796–819. This reprint differs from the original in pagination and typographic
+detail.
+1
+
+2
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+Assume that the noise (V, W ) in each simulation or observation of the
+stochastic system is independent of the noise in all other simulations. In
+other words, assume that we have access to an independent sequence of functions F (·, ·, Vk ) and G(·, ·, Wk ). Suppose that for any given θ, the stochastic
+iteration
+(1.2)
+
+rk+1 = rk + γk G(θ, rk , Wk )
+
+is known to converge to some h(θ). Furthermore, assume that the stochastic
+iteration
+(1.3)
+
+θk+1 = θk + γk F (θk , h(θk ), Vk )
+
+is known to converge to θ ∗ . Given this information, we wish to construct an
+algorithm that solves the system of equations (1.1).
+Note that the iteration (1.2) has only been assumed to converge when θ is
+held fixed. This assumption allows us to fix θ at a current value θk , run the
+iteration (1.2) for a long time, so that rk becomes approximately equal to
+h(θk ), use the resulting rk to update θk in the direction of F (θk , rk , Wk ), and
+repeat this procedure. While this is a sound approach, it requires an increasingly large time between successive updates of θk . Two-time-scale stochastic
+approximation methods circumvent this difficulty by using different step
+sizes {βk } and {γk } and update θk and rk , according to
+θk+1 = θk + βk F (θk , rk , Vk ),
+rk+1 = rk + γk G(θk , rk , Wk ),
+where βk is very small relative to γk . This makes θk “quasi-static” compared
+to rk and has an effect similar to fixing θk and running the iteration (1.2)
+forever. In turn, θk sees rk as a close approximation of h(θk ) and therefore
+its update looks almost the same as (1.3).
+How small should the ratio βk /γk be for the above scheme to work? The
+answer generally depends on the functions f (·, ·) and g(·, ·), which are typically unknown. This leads us to consider a safe choice whereby βk /γk → 0.
+The subject of this paper is the convergence rate analysis of the two-timescale algorithms that result from this choice. We note here that the analysis
+is significantly different from the case where limk (βk /γk ) > 0, which can be
+handled using existing techniques.
+Two-time-scale algorithms have been proved to converge in a variety of
+contexts [Borkar (1997), Konda and Borkar (1999) and Konda and Tsitsiklis
+(2003)]. However, except for the special case of Polyak–Ruppert averaging,
+there are no results on their rate of convergence. The existing analysis [Ruppert (1988), Polyak (1990), Polyak and Juditsky (1992) and Kushner and
+Yang (993)] of Polyak–Ruppert methods rely on special structure and are
+not applicable to the more general two-time-scale iterations considered here.
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+3
+
+The main result of this paper is a rule of thumb for calculating the asymptotic covariance of linear two-time-scale stochastic iterations. For example,
+consider the linear iterations
+(1.4)
+(1.5)
+
+θk+1 = θk + βk (b1 − A11 θk − A12 rk + Vk ),
+
+rk+1 = rk + γk (b2 − A21 θk − A22 rk + Wk ).
+−1/2
+
+We show that the asymptotic covariance matrix of βk θk is the same as
+−1/2
+that of βk θ̄k , where θ̄k evolves according to the single-time-scale stochastic iteration:
+θ̄k+1 = θ̄k + βk (b1 − A11 θ̄k − A12 r̄k + Vk ),
+0 = b2 − A21 θ̄k − A22 r̄k + Wk .
+
+−1/2
+
+Besides the calculation of the asymptotic covariance of βk θk (Theorem 2.8),
+−1/2
+we also establish that the distribution of βk (θk − θ ∗ ) converges to a Gaussian with mean zero and with the above asymptotic covariance (Theorem 4.1). We believe that the proof techniques of this paper can be extended
+to nonlinear stochastic approximation to obtain similar results. However,
+this and other possible extensions (such as weak convergence of paths to a
+diffusion process) are no pursued in this paper.
+In the linear case, our results also explain why Polyak–Ruppert averaging
+is optimal. Suppose that we are looking for the solution of the linear system
+Ar = b
+in a setting where we only have access to noisy measurements of b − Ar. The
+standard algorithm in this setting is
+(1.6)
+
+rk+1 = rk + γk (b − Ark + Wk ),
+
+and is known to converge under suitable conditions. (Here, Wk represents
+zero-mean noise at time k.) In order to improve the rate of convergence,
+Polyak (1990) and Ruppert (1988) suggest using the average
+(1.7)
+
+X
+1 k−1
+rl
+θk =
+k l=0
+
+as an estimate of the solution, instead of rk . It√was shown in Polyak (1990)
+that if kγk → ∞, the asymptotic covariance of kθk is A−1 Γ(A′ )−1 , where Γ
+is the covariance of Wk . Furthermore, this asymptotic covariance matrix is
+known to be optimal [Kushner and Yin (1997)].
+The calculation of the asymptotic covariance in Polyak (1990) and Ruppert (1988) uses the special averaging structure. We provide here an alternative calculation based on our results. Note that θk satisfies the recursion
+1
+(1.8)
+(rk − θk ),
+θk+1 = θk +
+k+1
+
+4
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+and the iteration (1.6)–(1.8) for rk and θk is a special case of the two-timescale iterations (1.4) and (1.5), with the correspondence b1 = 0, A11 = I,
+A12 = −I, Vk = 0, b2 = b, A21 = 0, A22 = 0. Furthermore, the assumption
+kγk → ∞ corresponds to our general assumption βk /γk → 0.
+By applying our rule of thumb
+√ see that
+√ to the iteration (1.6)–(1.8), we
+the asymptotic covariance of ( k + 1 )θk is the same as that of ( k + 1 )θ̄k ,
+where θ̄k satisfies
+1
+θ̄k+1 = θ̄k +
+(− θ̄k + A−1 (b + Wk )),
+k+1
+or
+X
+1 k−1
+(A−1 b + A−1 Wl ).
+k l=0
+√
+It then follows that the covariance of kθ̄k is A−1 Γ(A′ )−1 , and we recover
+the result of Polyak (1990), Polyak and Juditsky (1992) and Ruppert (1988)
+for the linear case.
+In the example just discussed, the use of two time-scales is not necessary
+for convergence, but is essential for the improvement of the convergence rate.
+This idea of introducing two time-scales to improve the rate of convergence
+deserves further exploration. It is investigated to some extent in the context
+of reinforcement learning algorithms in Konda (2002).
+Finally, we would like to point out the differences between the two-timescale iterations we study here and those that arise in the study of the tracking
+ability of adaptive algorithms [see Benveniste, Metivier and Priouret (1990)].
+There, the slow component represents the movement of underlying system
+parameters and the fast component represents the user’s algorithm. The fast
+component, that is, the user’s algorithm, does not affect the slow component. In contrast, we consider iterations in which the fast component affects
+the slow one and vice versa. Furthermore, the relevant figures of merit are
+different. For example, in Benveniste, Metivier and Priouret (1990), one is
+mostly interested in the behavior of the fast component, whereas we focus
+on the asymptotic covariance of the slow component.
+The outline of the paper is as follows. In the next section, we consider
+linear iterations driven by i.i.d. noise and obtain expressions for the asymptotic covariance of the iterates. In Section 3, we compare the convergence
+rate of two-time-scale algorithms and their single-time-scale counterparts.
+In Section 4, we establish asymptotic normality of the iterates.
+Before proceeding, we introduce some notation. Throughout the paper,
+| · | represents the Euclidean norm of vectors or the induced operator norm
+of matrices. Furthermore, I and 0 represent identity and null matrices, respectively. We use the abbreviation w.p.1 for “with probability 1.” We use
+c, c1 , c2 , . . . to represent some constants whose values are not important.
+
+θ̄k =
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+5
+
+2. Linear iterations. In this section, we consider iterations of the form
+(2.1)
+
+θk+1 = θk + βk (b1 − A11 θk − A12 rk + Vk ),
+
+(2.2)
+
+rk+1 = rk + γk (b2 − A21 θk − A22 rk + Wk ),
+
+where θk is in Rn , rk is in Rm , and b1 , b2 , A11 , A12 , A21 , A22 are vectors
+and matrices of appropriate dimensions.
+Before we present our results, we motivate various assumptions that we
+will need. The first two assumptions are standard.
+Assumption 2.1. The random variables (Vk , Wk ), k = 0, 1, . . . , are independent of r0 , θ0 , and of each other. They have zero mean and common
+covariance
+E[Vk Vk′ ] = Γ11 ,
+E[Vk Wk′ ] = Γ12 = Γ′21 ,
+E[Wk Wk′ ] = Γ22 .
+
+Assumption 2.2. The step-size sequences {γk } and {βk } are deterministic, positive, nonincreasing, and satisfy the following:
+1. k γk = k βk = ∞.
+2. βk , γk → 0.
+P
+
+P
+
+The key assumption that the step sizes βk and γk are of different orders
+of magnitude is subsumed by the following.
+Assumption 2.3.
+
+There exists some ε ≥ 0 such that
+βk
+→ ε.
+γk
+
+For the iterations (2.1) and (2.2) to be consistent with the general scheme
+of two-time-scale stochastic approximations described in the Introduction,
+we need some assumptions on the matrices Aij . In particular, we need iteration (2.2) to converge to A−1
+22 (b2 − A21 θ), when θk is held constant at θ.
+Furthermore, the sequence θk generated by the iteration
+−1
+θk+1 = θk + βk (b1 − A12 A−1
+22 b2 − (A11 − A12 A22 A21 )θk + Vk ),
+
+which is obtained by substituting A−1
+22 (b2 − A21 θk ) for rk in iteration (2.1),
+should also converge. Our next assumption is needed for the above convergence to take place.
+
+6
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+Let ∆ be the matrix defined by
+∆ = A11 − A12 A−1
+22 A21 .
+
+(2.3)
+
+Recall that a square matrix A is said to be Hurwitz if the real part of each
+eigenvalue of A is strictly negative.
+Assumption 2.4.
+
+The matrices −A22 , −∆ are Hurwitz.
+
+It is not difficult to show that, under the above assumptions, (θk , rk )
+converges in mean square and w.p.1 to (θ ∗ , r ∗ ). The objective of this paper
+is to capture the rate at which this convergence takes place. Obviously, this
+rate depends on the step-sizes βk , γk , and this dependence can be quite
+complicated in general. The following assumption ensures that the rate of
+mean square convergence of (θk , rk ) to (θ ∗ , r ∗ ) bears a simple relationship
+(asymptotically linear) with the step-sizes βk , γk .
+Assumption 2.5.
+
+1. There exists a constant β̄ ≥ 0 such that
+−1
+− βk−1 ) = β̄.
+lim(βk+1
+k
+
+2. If ε = 0, then
+−1
+− γk−1 ) = 0.
+lim(γk+1
+k
+
+3. The matrix −(∆ − β̄2 I) is Hurwitz.
+Note that when ε > 0, the iterations (2.1) and (2.2) are essentially singletime-scale algorithms and therefore can be analyzed using existing techniques [Nevel’son and Has’minskii (1973), Kusher and Clark (1978), Benveniste,
+Metivier and Priouret (1990), Duflo (1997) and Kusher and Yin (1997)].
+We include this in our analysis as we would like to study the behavior of
+the rate of convergence as ε ↓ 0. The following is an example of sequences
+satisfying the above assumption with ε = 0, β̄ = 1/(τ1 β0 ):
+γk =
+
+γ0
+,
+(1 + k/τ0 )α
+
+βk =
+
+β0
+,
+(1 + k/τ1 )
+
+1
+< α < 1,
+2
+
+Let θ ∗ ∈ Rm and r ∗ ∈ Rn be the unique solution to the system of linear
+equations
+A11 θ + A12 r = b1 ,
+A21 θ + A22 r = b2 .
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+7
+
+For each k, let
+θ̂k = θk − θ ∗ ,
+
+(2.4)
+
+r̂k = rk − A−1
+22 (b2 − A21 θk )
+
+and
+Σk11 = βk−1 E[θ̂k θ̂k′ ],
+Σk12 = (Σk21 )′ = βk−1 E[θ̂k r̂k′ ],
+Σk22 = γk−1 E[r̂k r̂k′ ],
+Σk11
+Σ =
+Σk21
+
+
+k
+
+Σk12
+.
+Σk22
+
+
+Our main result is the following.
+Theorem 2.6. Under Assumptions 2.1–2.5, and when the constant ε of
+Assumption 2.3 is sufficiently small, the limit matrices
+(2.5)
+
+(ε)
+
+(ε)
+
+Σ11 = lim Σk11 ,
+
+(ε)
+
+Σ12 = lim Σk12 ,
+
+k
+
+Σ22 = lim Σk22
+
+k
+
+k
+
+exist. Furthermore, the matrix
+"
+
+(0)
+
+Σ11
+Σ(0) =
+(0)
+Σ21
+
+(0)
+
+Σ12
+(0)
+Σ22
+
+#
+
+is the unique solution to the following system of equations
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+(0)
+
+lim Σ22 = Σ22 .
+
+(2.6)
+
+∆Σ11 + Σ11 ∆′ − β̄Σ11 + A12 Σ21 + Σ12 A′12 = Γ11 ,
+
+(2.7)
+
+A12 Σ22 + Σ12 A′22 = Γ12 ,
+
+(2.8)
+
+A22 Σ22 + Σ22 A′22 = Γ22 .
+
+Finally,
+(2.9)
+
+(ε)
+
+(0)
+
+lim Σ11 = Σ11 ,
+ε↓0
+
+(ε)
+
+lim Σ12 = Σ12 ,
+ε↓0
+
+(ε)
+
+(0)
+
+ε↓0
+
+Proof. Let us first consider the case ε = 0. The idea of the proof is to
+study the iteration in terms of transformed variables:
+(2.10)
+
+θ̃k = θ̂k ,
+
+r̃k = Lk θ̂k + r̂k ,
+
+for some sequence of n × m matrices {Lk } which we will choose so that the
+faster time-scale iteration does not involve the slower time-scale variables.
+To see what the sequence {Lk } should be, we rewrite the iterations (2.1)
+
+8
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+and (2.2) in terms of the transformed variables as shown below (see Section A.1 for the algebra leading to these equations):
+(2.11)
+where
+
+k
+θ̃k+1 = θ̃k − βk (B11
+θ̃k + A12 r̃k ) + βk Vk ,
+k
+k
+r̃k+1 = r̃k − γk (B21
+θ̃k + B22
+r̃k ) + γk Wk + βk (Lk+1 + A−1
+22 A21 )Vk ,
+k
+B11
+= ∆ − A12 Lk ,
+k
+B21
+=
+
+Lk − Lk+1 βk
+k
++ (Lk+1 + A−1
+22 A21 )B11 − A22 Lk ,
+γk
+γk
+
+k
+B22
+=
+
+βk
+(Lk+1 + A−1
+22 A21 )A12 + A22 .
+γk
+
+k is eventually zero. To accomplish this,
+We wish to choose {Lk } so that B21
+we define the sequence of matrices {Lk } by
+
+(2.12)
+
+Lk = 0,
+
+0 ≤ k ≤ k0 ,
+
+k
+k −1
+Lk+1 = (Lk − γk A22 Lk + βk A−1
+22 A21 B11 )(I − βk B11 )
+
+∀ k ≥ k0 ,
+
+k = 0 for all k ≥ k . For the above recursion to be meaningso that B21
+0
+k ) to be nonsingular for all k ≥ k . This is handled
+ful, we need (I − βk B11
+0
+by Lemma A.1 in the Appendix, which shows that if k0 is sufficiently large,
+then the sequence of matrices {Lk } is well defined and also converges to
+zero.
+For every k ≥ k0 , we define
+
+Σ̃k11 = βk−1 E[θ̃k θ̃k′ ],
+
+(Σ̃k21 )′ = Σ̃k12 = βk−1 E[θ̃k r̃k′ ],
+Σ̃k22 = γk−1 E[r̃k r̃k′ ].
+Using the transformation (2.10), it is easy to see that
+Σ̃k11 = Σk11 ,
+Σ̃k12 = Σk11 L′k + Σk12 ,
+Σ̃k22 = Σk22 +
+Since Lk → 0, we obtain
+
+
+
+βk
+(Lk Σk12 + Σk21 L′k + Lk Σk11 L′k ).
+γk
+
+
+lim Σk11 = lim Σ̃k11 ,
+k
+
+k
+
+lim Σk12 = lim Σ̃k12 ,
+k
+
+k
+
+lim Σk22 = lim Σ̃k12 ,
+k
+k
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+9
+
+provided that the limits exist.
+k = 0 for large enough
+To compute limk Σ̃k22 , we use (2.11), the fact that B21
+k
+k, the fact that B22 converges to A22 , and some algebra, to arrive at the
+following recursion for Σ̃k22 :
+(2.13)
+
+k
+k
+k
+′
+k
+k
+Σ̃k+1
+22 = Σ̃22 + γk (Γ22 − A22 Σ̃22 − Σ̃22 A22 + δ22 (Σ̃22 )),
+
+k (·) is some matrix-valued affine function (on the space of matrices)
+where δ22
+such that
+k
+(Σ22 ) = 0
+lim δ22
+
+for all Σ22 .
+
+k
+
+Since −A22 is Hurwitz, it follows (see Lemma A.2 in the Appendix) that the
+limit
+(0)
+
+lim Σk22 = lim Σ̃k22 = Σ22
+k
+
+k
+
+(0)
+
+exists, and Σ22 satisfies (2.8).
+Similarly, Σ̃k12 satisfies
+(2.14)
+
+(0)
+
+k
+k
+′
+k
+k
+Σ̃k+1
+12 = Σ̃12 + γk (Γ12 − A12 Σ22 − Σ̃12 A22 + δ12 (Σ̃12 ))
+
+k (·) is an affine function that goes to zero. (The coeffiwhere, as before, δ12
+cients of this affine function depend, in general, on Σ̃k22 , but the important
+property is that they tend to zero as k → ∞.) Since −A22 is Hurwitz, the
+limit
+(0)
+
+lim Σk12 = lim Σ̃k12 = Σ12
+k
+
+k
+
+exists and satisfies (2.7). Finally, Σ̃k11 satisfies
+(0)
+
+(2.15)
+
+(0)
+
+′
+k
+k
+Σ̃k+1
+11 = Σ̃11 + βk (Γ11 − A12 Σ21 − Σ12 A12 − ∆Σ̃11
+k
+− Σ̃k11 ∆′ + β̄ Σ̃k11 + δ11
+(Σ̃k11 )),
+
+k (·) is some affine function that goes to zero. (Once more, the coefwhere δ11
+ficients of this affine function depend, in general, on Σ̃k22 and Σ̃k12 , but they
+tend to zero as k → ∞.) Since −(∆ − β̄2 I) is Hurwitz, the limit
+(0)
+
+lim Σk11 = lim Σ̃k11 = Σ11
+k
+
+k
+
+exists and satisfies (2.6).
+The above arguments show that for ε = 0, the limit matrices in (2.5) exist
+and satisfy (2.6)–(2.8). To complete the proof, we need to show that these
+limit matrices exist for sufficiently small ε > 0 and that the limiting relations
+(2.9) hold. As this part of the proof uses standard techniques, we will only
+outline the analysis.
+
+10
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+Define for each k,
+Zk =
+
+
+
+θ̂k
+r̂k
+
+
+
+.
+
+The linear iterations (2.1) and (2.2) can be rewritten in terms of Zk as
+Zk+1 = Zk − βk Bk Zk + βk Uk ,
+where Uk is a sequence of independent random vectors and {Bk } is a sequence of deterministic matrices. Using the assumption that βk /γk converges
+to ε, it can be shown that the sequence of matrices Bk converges to some
+matrix B (ε) and, similarly, that
+lim E[Uk Uk′ ] = Γ(ε)
+k
+
+for some matrix Γ(ε) . Furthermore, when ε > 0 is sufficiently small, it can
+be shown that −(B (ε) − β̄2 I) is Hurwitz. It then follows from standard theorems [see, e.g., Polyak (1976)] on the asymptotic covariance of stochastic
+approximation methods, that the limit
+lim βk−1 E[Zk Zk′ ]
+k
+
+exists and satisfies a linear equation whose coefficients depend smoothly on ε
+(the coefficients are infinitely differentiable w.r.t. ε). Since the components of
+(ε)
+(ε)
+(ε)
+the above limit matrix are Σ11 , Σ12 and Σ22 modulo some scaling, the latter
+matrices also satisfy a linear equation which depends on ε. The explicit form
+of this equation is tedious to write down and does not provide any additional
+insight for our purposes. We note, however, that when we set ε to zero, this
+system of equations becomes the same as (2.6)–(2.8). Since (2.6)–(2.8) have
+(ε)
+(ε)
+(ε)
+a unique solution, the system of equations for Σ11 , Σ12 and Σ22 also has
+a unique solution for all sufficiently small ε. Furthermore, the dependence
+of the solution on ε is smooth because the coefficients are smooth in ε. 
+Remark 2.7. The transformations used in the above proof are inspired
+by those used to study singularly perturbed ordinary differential equations
+[Kokotovic (1984)]. However, most of these transformations were time-invariant
+because the perturbation parameter was constant. In such cases, the matrix L satisfies a static Riccati equation instead of the recursion (2.12). In
+contrast, our transformations are time-varying because our “perturbation”
+parameter βk /γk is time-varying.
+In most applications, the iterate rk corresponds to some auxiliary param(0)
+eters and one is mostly interested in the asymptotic covariance Σ11 of θk .
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+11
+
+Note that according to Theorem 2.6, the covariance of the auxiliary parameters is of the order of γk , whereas the covariance of θk is of the order of βk .
+With two time-scales, one can potentially improve the rate of convergence
+of θk (cf. to a single-time-scale algorithm) by sacrificing the rate of convergence of the auxiliary parameters. To make such comparisons possible, we
+(0)
+need an alternative interpretation of Σ11 , that does not explicitly refer to
+the system (2.6)–(2.8). This is accomplished by our next result, which provides a useful tool for the design and analysis of two-time-scale stochastic
+approximation methods.
+(0)
+
+−1/2
+
+Theorem 2.8. The asymptotic covariance matrix Σ11 of βk θk is the
+−1/2
+same as the asymptotic covariance of βk θ̄k , where θ̄k is generated by
+(2.16)
+
+θ̄k+1 = θ̄k + βk (b1 − A11 θ̄k − A12 r̄k + Vk ),
+
+(2.17)
+
+0 = b2 − A21 θ̄k − A22 r̄k + Wk .
+
+In other words,
+
+(0)
+
+Σ11 = lim βk−1 E[θ̄k θ̄k′ ].
+k
+
+Proof. We start with (2.6)–(2.8) and perform some algebraic manipu(0)
+(0)
+(0)
+lations to eliminate Σ12 and Σ22 . This leads to a single equation for Σ11 ,
+of the form
+(0)
+
+(0)
+
+(0)
+
+∆Σ11 + Σ11 ∆′ − β̄Σ11
+
+−1
+′ −1 ′
+′ −1 ′
+= Γ11 − A12 A−1
+22 Γ21 − Γ12 (A22 ) A12 + A12 A22 Γ22 (A22 ) A12 .
+
+Note that the right-hand side of the above equation is exactly the covariance
+of Vk − A12 A−1
+22 Wk . Therefore, the asymptotic covariance of θk is the same
+as the asymptotic covariance of the following stochastic approximation:
+θ̄k+1 = θ̄k + βk (−∆θ̄k + Vk − A12 A−1
+22 Wk ).
+
+Finally, note that the above iteration is the one obtained by eliminating rk
+from iterations (2.16) and (2.17). 
+Remark. The single-time-scale stochastic approximation procedure in Theorem 2.8 is not implementable when the matrices Aij are unknown. The
+theorem establishes that two-time-scale stochastic approximation performs
+as well as if these matrices are known.
+Remark. The results of the previous section show that the asymptotic
+−1/2
+covariance matrix of βk θk is independent of the step-size schedule {γk }
+for the fast iteration if
+βk
+→ 0.
+γk
+
+12
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+To understand, at least qualitatively, the effect of the step-sizes γk on the
+transient behavior, recall the recursions (2.13)–(2.15) satisfied by the covariance matrices Σ̃k :
+(0)
+
+(0)
+
+′
+k
+Σ̃k+1
+11 = Σ̃11 + βk (Γ11 − A12 Σ21 − Σ12 A12
+
+k
+− ∆Σ̃k11 − Σ̃k11 ∆′ − β̄ Σ̃k11 + δ11
+(Σ̃k11 )),
+(0)
+
+k
+k
+′
+k
+k
+Σ̃k+1
+12 = Σ̃12 + γk (Γ12 − A12 Σ22 − Σ̃12 A22 + δ12 (Σ̃12 )),
+k
+k
+k
+k
+′
+k
+Σ̃k+1
+22 = Σ22 + γk (Γ22 − A22 Σ22 − Σ22 A22 + δ22 (Σ22 )),
+
+k (·) are affine functions that tend to zero as k tends to infinity.
+where the δij
+k are of
+Using explicit calculations, it is easy to verify that the error terms δij
+the form
+(0)
+
+(0)
+
+k
+= A12 (Σ̃k21 − Σ21 ) + (Σ̃k12 − Σ12 )A′12 + O(βk ),
+δ11
+(0)
+k
+= A12 (Σ22 − Σ̃k22 ) + O
+δ12
+k
+δ22
+=O
+
+
+
+
+
+βk
+,
+γk
+
+
+βk
+.
+γk
+
+
+To clarify the meaning of the above relations, the first one states that the
+k (Σ ) is the sum of the constant term A (Σ̃k − Σ(0) ) +
+affine function δ11
+11
+12
+21
+21
+(0)
+k
+′
+k
+(Σ̃12 − Σ12 )A12 , and another affine function of Σ11 whose coefficients are
+proportional to βk .
+(0)
+
+The above relations show that the rate at which Σ̃k11 converges to Σ11
+(0)
+k .
+depends on the rate at which Σ̃k12 converges to Σ12 , through the term δ11
+k
+k
+The rate of convergence of Σ̃12 , in turn, depends on that of Σ̃22 , through the
+k . Since the step-size in the recursions for Σ̃k and Σ̃k is γ , and the
+term δ12
+k
+22
+12
+error terms in these recursions are proportional to βk /γk , the transients depend on both sequences {γk } and {βk /γk }. But each sequence has a different
+effect. When γk is large, instability or large oscillations of rk are possible.
+k can be large and
+On the other hand, when βk /γk is large, the error terms δij
+can prolong the transient period. Therefore, one would like to have βk /γk
+decrease to zero quickly, while at the same time avoiding large γk . Apart
+from these loose guidelines, it appears difficult to obtain a characterization
+of desirable step-size schedules.
+3. Single time-scale versus two time-scales. In this section, we compare
+−1/2
+the optimal asymptotic covariance of βk θk that can be obtained by a realizable single-time-scale stochastic iteration, with the optimal asymptotic
+covariance that can be obtained by a realizable two-time-scale stochastic
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+13
+
+iteration. The optimization is to be carried out over a set of suitable gain
+matrices that can be used to modify the algorithm, and the optimality criterion to be used is one whereby a covariance matrix Σ is preferable to another
+covariance matrix Σ̃ if Σ̃ − Σ is nonzero and nonnegative definite.
+Recall that Theorem 2.8 established that the asymptotic covariance of a
+two-time-scale iteration is the same as in a related single-time-scale iteration. However, the related single-time-scale iteration is unrealizable, unless
+the matrix A is known. In contrast, in this section we compare realizable iterations that do not require explicit knowledge of A (although knowledge of
+A would be required in order to select the best possible realizable iteration).
+We now specify the classes of stochastic iterations that we will be comparing.
+1. We consider two-time-scale iterations of the form
+θk+1 = θk + βk G1 (b1 − A11 θk − A12 rk + Vk ),
+rk+1 = rk + γk (b2 − A21 θk − A22 rk + Wk ).
+Here, G1 is a gain matrix, which we are allowed to choose in a manner
+−1/2
+that minimizes the asymptotic covariance of βk θk .
+2. We consider single-time-scale iterations, in which we have γk = βk , but
+in which we are allowed to use an arbitrary gain matrix G, in order to
+−1/2
+minimize the asymptotic covariance of βk θk . Concretely, we consider
+iterations of the form
+
+  
+
+
+θk+1
+θk
+b1 − A11 θk − A12 rk + Vk
+=
++ βk G
+.
+rk+1
+rk
+b2 − A21 θk − A22 rk + Wk
+
+We then have the following result.
+
+Theorem 3.1. Under Assumptions 2.1–2.5, and with ε = 0, the mini−1/2
+mal possible asymptotic covariance of βk θk , when the gain matrices G1
+and G can be chosen freely, is the same for the two classes of stochastic
+iterations described above.
+Proof. The single-time-scale iteration is of the form
+Zk+1 = Zk + βk G(b − AZk + Uk ),
+where
+Zk =
+
+
+
+
+
+
+
+
+
+θk
+,
+rk
+
+Uk =
+
+
+
+Vk
+Wk
+
+
+
+and
+b
+b= 1 ,
+b2
+
+
+
+A11
+A=
+A21
+
+
+
+A12
+.
+A22
+
+14
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+As is well known [Kushner and Yin (1997)], the optimal (in the sense of pos−1/2
+itive definiteness) asymptotic covariance of βk Zk over all possible choices
+−1
+of G is the covariance of A Uk . We note that the top block of A−1 Uk is
+equal to ∆−1 (Vk − A12 A−1
+22 Wk ). It then follows that the optimal asymptotic
+−1/2
+covariance matrix of βk θk is the covariance of ∆−1 (Vk − A12 A−1
+22 Wk ).
+For the two-time-scale iteration, Theorem 2.8 shows that for any choice
+of G1 , the asymptotic covariance is the same as for the single-time-scale
+iteration:
+θk+1 = θk + βk G1 (b1 − ∆θk + Vk − A12 A−1
+22 Wk ).
+
+−1/2
+
+From this, it follows that the optimal asymptotic covariance of βk θk is
+the covariance of ∆−1 (Vk − A12 A−1
+22 Wk ), which is the same as for singletime-scale iterations. 
+4. Asymptotic normality. In Section 2, we showed that βk−1 E[θ̂k θ̂k′ ] con(0)
+verges to Σ11 . The proof techniques used in that section do not extend easily
+(without stronger assumptions) to the nonlinear case. For this reason, we develop here a different result, namely, the asymptotic normality of θ̂k , which
+is easier to extend to the nonlinear case. In particular, we show that the
+−1/2
+distribution of βk θ̂k converges to a zero-mean normal distribution with
+(0)
+covariance matrix Σ11 . The proof is similar to the one presented in Polyak
+(1990) for stochastic approximation with averaging.
+−1/2
+
+Theorem 4.1. If Assumptions 2.1–2.5 hold with ε = 0, then βk
+(0)
+converges in distribution to N (0, Σ11 ).
+
+θ̂k
+
+Proof. Recall the iterations (2.11) in terms of transformed variables θ̃
+k = 0, these iterations can
+and r̃. Assuming that k is large enough so that B21
+be written as
+(1)
+
+θ̃k+1 = (I − βk ∆)θ̃k − βk A12 r̃k + βk Vk + βk δk ,
+(2)
+
+r̃k+1 = (I − γk A22 )r̃k + γk Wk + βk δk + βk (Lk+1 + A−1
+22 A21 )Vk ,
+(1)
+
+where δk
+
+(2)
+
+and δk
+
+are given by
+(1)
+
+δk = A12 Lk θ̃k ,
+(2)
+
+δk = −(Lk+1 + A−1
+22 A21 )A12 r̃k .
+
+Using Theorem 2.6, E[|θ̃k |2 ]/βk and E[|r̃k |2 ]/γk are bounded, which implies
+that
+(1)
+
+E[|δk |2 ] ≤ cβk |Lk |2 ,
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+(4.1)
+
+15
+
+(2)
+
+E[|δk |2 ] ≤ cγk ,
+
+for some constant c > 0. Without loss of generality assume k0 = 0 in (2.11).
+For each i, define the sequence of matrices Θij and Rji , j ≥ i, as
+Θii = I,
+Θij+1 = Θij − βj ∆Θij
+
+∀ j ≥ i,
+
+Rii = I,
+i
+Rj+1
+= Rji − γj A22 Rji
+
+∀ j ≥ i.
+
+Using the above matrices, r̃k and θ̃k can be rewritten as
+(4.2)
+
+θ̃k = Θ0k θ̃0 −
+
+k−1
+X
+
+βi Θik A12 r̃i +
+
+k−1
+X
+
+βi Θik Vi +
+
+(1)
+
+βi Θik δi
+
+i=0
+
+i=0
+
+i=0
+
+k−1
+X
+
+and
+r̃k = Rk0 r̃0 +
+
+k−1
+X
+
+γi Rki Wi +
+
+i=0
+
+(4.3)
++
+
+k−1
+X
+
+k−1
+X
+
+(2)
+
+βi Rki δi
+
+i=0
+
+βi Rki (Li+1 + A−1
+22 A21 )Vi .
+
+i=0
+
+1/2
+
+Substituting the right-hand side of (4.3) for r̃k in (4.2), and dividing by βk ,
+we have
+−1/2
+
+βk
+
+k−1
+X
+1
+−1/2 0
+βi Θ̃ik A12 (βi
+Ri r̃0 )
+θ̃k = √ Θ̃0k θ̃0 +
+β0
+i=0
+
+(4.4)
+
++
+
+k−1
+X
+
+(3)
+(2)
+−1/2 (1)
+(1)
+δi ) + Sk + Sk + Sk
+
+βi Θ̃ik (βi
+
+i=0
+
++
+
+k−1
+Xp
+
+βi Θ̃ik (Vi + A12 A−1
+22 Wi ),
+
+i=0
+
+where
+Θ̃ik =
+
+s
+
+βi i
+Θ
+βk k
+
+k−1
+X
+(1)
+βi Θ̃ik A12
+Sk =
+i=0
+
+∀ k ≥ i,
+i−1
+−1/2 X
+(2)
+βi
+βj Rij δj
+j=0
+
+!
+
+,
+
+16
+
+V. R. KONDA AND J. N. TSITSIKLIS
+k−1
+X
+(2)
+βi Θ̃ik A12
+Sk =
+i=0
+(3)
+
+Sk =
+
+i−1
+−1/2 X
+βi
+βj Rij (Lj+1 + A−1
+22 A21 )Vj
+j=0
+
+k−1
+Xp
+
+βi Θ̃ik A12
+
+i−1
+X
+
+j=0
+
+i=0
+
+γj Rij Wj −
+
+k−1
+X√
+
+!
+
+,
+
+βj Θ̃jk A12 A−1
+22 Wj .
+
+j=0
+
+We wish to prove that the various terms in (4.4), with the exception of
+the last one, converge in probability to zero. Note that the last term is a
+martingale and therefore, can be handled by appealing to a central limit
+theorem for martingales. Some of the issues we encounter in the remainder
+of the proof are quite standard, and in such cases we will only provide an
+outline.
+To better handle each of the various terms in (4.4), we need approximations of Θik and Rki . To do this, consider the nonlinear map A 7→ exp(A)
+from square matrices to square matrices. A simple application of the inverse
+function theorem shows that this map is a diffeomorphism (differentiable,
+one-to-one with differentiable inverse) in a neighborhood of the origin. Let
+us denote the inverse of exp(·) by ln(·). Since ln(·) is differentiable around
+I = exp(0), the function ε 7→ ln(I − εA) can be expanded into Taylor’s series
+for sufficiently small ε as follows:
+ln(I − εA) = −ε(A − E(ε)),
+where E(ε) commutes with A and limε→0 E(ε) = 0. Assuming, without loss
+of generality, that γ0 and β0 are small enough for the above approximation
+to hold, we have for k ≥ 0,
+−
+
+k−1
+X
+
+(1)
+βj (∆ − Ej )
+
+Rki = exp −
+
+k−1
+X
+
+(2)
+γj (A22 − Ej )
+
+Θik = exp
+(4.5)
+
+j=i
+
+j=i
+
+!
+
+,
+
+!
+
+,
+
+(i)
+
+for some sequence of matrices {Ek }, i = 1, 2, converging to zero. To obtain
+a similar representation for Θ̃ik , note that Assumption 2.5(1) implies
+(4.6)
+
+βk
+= (1 + βk (εk + β̄)),
+βk+1
+
+for some εk → 0. Therefore, using the fact that 1 + x = exp(x(1 − o(x)))
+and (4.5), we have
+(4.7)
+
+Θ̃ik = exp
+
+−
+
+k−1
+X
+j=i
+
+βj
+
+
+
+β̄
+(3)
+∆ − I − Ej
+2
+
+
+!
+
+,
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+17
+
+(3)
+
+for some sequences of matrices Ek converging to zero. Furthermore, it is not
+(i)
+difficult to see that the matrices Ek , i = 1, 2, 3, commute with the matrices
+∆, A22 and ∆ − (β̄/2)I, respectively. Since −∆, −(∆ − (β̄/2)I) and −A22 are
+Hurwitz, using standard Lyapunov techniques we have for some constants
+c1 , c2 > 0,
+max(|Θik |, |Θ̃ik |) ≤ c1 exp
+
+−c2
+
+k−1
+X
+
+βj ,
+
+−c2
+
+k−1
+X
+
+!
+
+(4.8)
+|Rki | ≤ c1 exp
+
+!
+
+j=i
+
+γj .
+
+j=i
+
+Therefore it is easy to see that the first term in (4.4) goes to zero w.p.1. To
+P
+prove that the second term goes to zero w.p.1, note that ln βi ≈ −β̄ i−1
+j=0 βj
+[cf. (4.6)] and therefore for some c1 , c2 > 0,
+−1/2 0
+|βi
+Ri r̃0 | ≤ c1 exp
+
+i−1 
+X
+
+β̄
+γj − βj
+−c2
+2
+j=0
+
+!
+
+,
+
+which goes to zero as i → ∞ (Assumption 2.3). Therefore, it follows from
+Lemma A.3 that the second term also converges to zero w.p.1. Using (4.1)
+and Lemma A.3, it is easy to see that the third term in (4.4) converges in
+(1)
+the mean (i.e., in L1 ) to zero. Next, consider E[|Sk |]. Using (4.1), we have
+for some positive constants c1 , c2 and c3 ,
+E
+
+"
+
+i−1
+−1/2 X
+(2)
+βi
+βj Rji δj
+j=0
+
+≤ c1
+
+i−1
+X
+
+j=0
+
+#
+
+γj exp −
+
+i−1
+X
+l=j
+
+!s
+
+(c2 γl − c3 βl )
+(1)
+
+Since βj /γj → 0, Lemma A.3 implies that Sk
+(2)
+zero. To study Sk , consider
+E
+
+"
+
+βj
+.
+γj
+
+converges in the mean to
+
+2
+i−1
+−1/2 X
+j
+−1
+βi
+βj Ri (Lj+1 + A22 A21 )Vj
+j=0
+
+#
+
+.
+
+Since the Vk are zero mean i.i.d., the above term is bounded above by
+c1
+
+i−1
+X
+
+j=0
+
+γj exp −
+
+i−1
+X
+l=j
+
+!
+
+(c2 γl − c3 βl )
+
+βj
+γj
+
+18
+
+V. R. KONDA AND J. N. TSITSIKLIS
+(2)
+
+for some constants c1 , c2 and c3 . Lemma A.3 implies that Sk converges
+(3)
+in the mean to zero. Finally, consider Sk . By interchanging the order of
+summation, it can be rewritten as
+k−1
+Xq
+
+βj Θ̃jk
+
+(4.9)
+
+j=0
+
+"
+
+X
+γj k−1
+βi (Θji )−1 A12 Rij − A12 A−1
+22 Wj .
+βj i=j
+#
+
+Since −A22 is Hurwitz, we have
+A−1
+22 =
+
+Z ∞
+0
+
+exp(−A22 t) dt,
+
+and we can rewrite the term inside the brackets in (4.9) as
+k−1
+X
+i=j
+
+γi
+
+
+
+γj βi j −1
+(Θi ) − I A12 Rij
+βj γi
+
+
++ A12
+
+k−1
+X
+i=j
+
+γi Rij −
+
+Z Pk−1 γi
+i=j
+
+0
+
+exp(−A22 t) dt
+
+!
+
+− A12 A−1
+22 exp
+
+−
+
+k−1
+X
+
+γi A22 .
+
+i=j
+
+We consider each of these terms separately. To analyze the first term, we wish
+to obtain an “exponential” representation for γj βi /βj γi . It is not difficult to
+see from Assumptions 2.5 (1) and (2) that
+βk+1 βk
+= (1 − εk γk )
+γk+1
+γk
+=
+
+βk
+exp(−εk γk + O(ε2k γk2 )),
+γk
+
+where εk → 0. Therefore, using (4.5) and the mean value theorem, we have
+γj βi j −1
+(Θ ) − I
+βj γi i
+
+βl
+≤ c1 sup εl +
+γl
+l≥j
+
+
+ X
+i−1
+
+!
+
+γl exp c2
+
+l=j
+
+i−1 
+X
+l=j
+
+ !
+
+βl
+εl +
+γl ,
+γl
+
+which in turn implies, along with Lemma A.4 (with p = 1) and Assumption 2.3, that the first term is bounded in norm by c supl≥j (εl + γl /βl ) for
+some constant c > 0. The second term is the difference between an integral
+and its Riemannian approximation and therefore is bounded in norm by
+c supl≥j γl for some constant c > 0. Finally, since −A22 is Hurwitz, the norm
+of the third term is bounded above by
+c1 exp −c2
+
+k−1
+X
+i=j
+
+γi
+
+!
+
+!
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+19
+
+(3)
+
+for some constants c1 , c2 > 0. An explicit computation of E[|Sk |2 ], using
+the fact that (Vk , Wk ) is zero-mean i.i.d., and an application of Lemma A.3
+(3)
+shows that Sk converges to zero in the mean square. Therefore, the distri−1/2
+bution of βk θ̃k converges to the asymptotic distribution of the martingale
+comprising the remaining terms. To complete the proof, we use the standard
+central limit theorem for martingales [see Duflo (1997)]. The key assumption
+of this theorem is Lindberg’s condition which, in our case, boils down to the
+following: for each ε > 0,
+lim
+k
+
+k−1
+X
+i=0
+
+(k)
+
+h
+
+(k)
+
+i
+
+E |Xi |2 I{|Xi | ≥ ε} = 0,
+
+where I is the indicator function and for each i < k,
+(k)
+
+Xi
+
+=
+
+βi Θ̃ik (Vi + A12 A−1
+22 Wi ).
+
+p
+
+The verification of this assumption is quite standard. 
+Remark. Similar results are possible for nonlinear iterations with Markov
+noise. For an informal sketch of such results, see Konda (2002).
+APPENDIX: AUXILIARY RESULTS
+A.1. Verification of (2.11). Without loss of generality, assume that b1 =
+b2 = 0. Then, θ ∗ = 0 and
+θ̃k = θ̂k = θk ,
+and, using the definition of r̃k [cf. (2.4) and (2.10)], we have
+(A.10)
+
+r̃k = Lk θk + r̂k = Lk θk + rk + A−1
+22 A21 θk = rk + Mk θk ,
+
+where
+Mk = Lk + A−1
+22 A21 .
+To verify the equation for θ̃k+1 = θk+1 , we use the recursion for θk+1 , to
+obtain
+θk+1 = θk − βk (A11 θk + A12 rk − Vk )
+
+= θk − βk (A11 θk + A12 r̃k − A12 (Lk + A−1
+22 A21 )θk − Vk )
+
+= θk − βk (A11 θk − A12 A−1
+22 A21 θk − A12 Lk θk + A12 r̃k − Vk )
+= θk − βk (∆θk − A12 Lk θk + A12 r̃k ) + βk Vk
+k
+= θk − βk (B11
+θk + A12 r̃k ) + βk Vk ,
+
+k =∆−A L .
+where the last step makes use of the definition B11
+12 k
+
+20
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+To verify the equation for r̃k+1 , we first use the definition (A.10) of r̃k+1 ,
+and then the update formulas for θk+1 and rk+1 , to obtain
+r̃k+1 = rk+1 + (A−1
+22 A21 + Lk+1 )θk+1
+= rk − γk (A21 θk + A22 rk − Wk ) + (A−1
+22 A21 + Lk+1 )θk+1
+= rk − γk (A21 θk + A22 (r̃k − (Lk + A−1
+22 A21 )θk ) − Wk )
++ (A−1
+22 A21 + Lk+1 )θk+1
+
+= rk − γk (A22 r̃k − A22 Lk θk − Wk ) + Mk+1 θk+1
+= rk + Mk+1 θk − γk (A22 r̃k − A22 Lk θk − Wk )
+k
+− βk Mk+1 (B11
+θk + A12 r̃k − Vk )
+
+Lk − Lk+1
+βk
+k
+= rk + Mk θk − γk
+− A22 Lk + Mk+1 B11
+θk
+γk
+γk
+
+
++ γk Wk − γk
+
+
+
+βk
+A22 + Mk+1 A12 r̃k + βk Mk+1 Vk
+γk
+
+
+
+
+k
+k
+= r̃k − γk (B21
+θ̃k + B22
+r̃k ) + γk Wk + βk Mk+1 Vk ,
+
+which is the desired formula.
+A.2. Convergence of the recursion (2.12).
+Lemma A.1. For k0 sufficiently large, the (deterministic) sequence of
+matrices {Lk } defined by (2.12) is well defined and converges to zero.
+Proof. The recursion (2.12) can be rewritten, for k ≥ k0 , as
+(A.2)
+
+Lk+1 = (I − γk A22 )Lk
+k
+k
+k −1
++ βk (A−1
+22 A21 B11 + (I − γk A22 )Lk B11 )(I − βk B11 ) ,
+
+which is of the form
+Lk+1 = (I − γk A22 )Lk + βk Dk (Lk ),
+for a sequence of matrix-valued functions Dk (Lk ) defined in the obvious
+manner. Since −A22 is Hurwitz, there exists a quadratic norm
+|x|Q =
+
+p
+
+x′ Qx,
+
+a corresponding induced matrix norm, and a constant a > 0 such that
+|(I − γA22 )|Q ≤ (1 − aγ)
+for every sufficiently small γ. It follows that
+|(I − γA22 )L|Q ≤ (1 − aγ)|L|Q
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+21
+
+for all matrices L of appropriate dimensions and for γ sufficiently small.
+Therefore, for sufficiently large k, we have
+|Lk+1 |Q ≤ (1 − γk a)|Lk |Q + βk |D(Lk )|Q .
+
+For k0 sufficiently large, the sequence of functions {Dk (·)}k≥k0 is well defined
+and uniformly bounded on the unit Q-ball {L : |L|Q ≤ 1}. To see this, note
+k | = |∆ − A L | ≤ c, for some absolute
+that as long as |Lk |Q ≤ 1, we have |B11
+12 k
+k is invertible, and
+constant c. With βk small enough, the matrix I − βk B11
+−1
+k
+k
+satisfies |(I − βk B11 ) | ≤ 2. With |B11 | bounded by c, we have
+k
+k
+|A−1
+22 A21 B11 + (I − γk A22 )Lk B11 | ≤ d(1 + |Lk |),
+
+for some absolute constant d. To summarize, for large k, if |Lk |Q ≤ 1, we
+have |Dk (Lk )| ≤ 4d. Since any two norms on a finite-dimensional vector
+space are equivalent, we have
+
+
+d1 βk
+|Lk+1 |Q ≤ (1 − γk a)|Lk |Q + (γk a)
+,
+aγk
+for some constant d1 > 0. Recall now that the sequence Lk is initialized with
+Lk0 = 0. If k0 is large enough so that d1 βk /aγk < 1, then |Lk |Q ≤ 1 for all k.
+Furthermore, since 1 − x ≤ e−x , we have
+|Lk |Q ≤
+
+k−1
+X
+
+j=k0
+
+γj exp −a
+
+k−1
+X
+i=j
+
+γi
+
+!
+
+d1 βj
+.
+γj
+
+
+The rest follows from Lemma A.3 as βk /γk → 0. 
+A.3. Linear matrix iterations. Consider a linear matrix iteration of the
+form
+Σk+1 = Σk + βk (Γ − AΣk − Σk B + δk (Σk ))
+
+for some square matrices A, B, step-size sequence βk and sequence of matrixvalued affine functions δk (·). Assume:
+1. The real parts of the eigenvalues of A are positive and the real parts of
+the eigenvalues of B are nonnegative. (The roles of A and B can also be
+interchanged.)
+2. βk is positive and
+βk → 0,
+3. limk δk (·) = 0.
+
+X
+k
+
+βk = ∞.
+
+We then have the following standard result whose proof can be found, for
+example, in Polyak (1976).
+Lemma A.2.
+to the equation
+
+For any Σ0 , limk Σk = Σ∗ exists and is the unique solution
+AΣ + ΣB = Γ.
+
+22
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+A.4. Convergence of some series. We provide here some lemmas that are
+used in the proof of asymptotic normality. Throughout this section, {γk } is
+a positive sequence such that:
+1. γk → 0, and
+P
+2. k γk = ∞.
+
+Furthermore, {tk } is the sequence defined by
+t0 = 0,
+
+tk =
+
+k−1
+X
+
+γk ,
+
+k > 0.
+
+j=0
+
+Lemma A.3. For any nonnegative sequence {δk } that converges to zero
+and any p ≥ 0, we have
+(A.3)
+
+lim
+k
+
+k
+X
+
+k−1
+X
+
+γj
+
+γi
+
+i=j
+
+j=0
+
+!p
+
+exp −
+
+k−1
+X
+
+!
+
+γi δj = 0.
+
+i=j
+
+Proof. Let δ(·) be a nonnegative function on [0, ∞) defined by
+δ(t) = δk ,
+
+tk ≤ t < tk+1 .
+
+Then it is easy to see that for any k0 > 0,
+k
+X
+
+k−1
+X
+
+γj
+
+γi
+
+i=j
+
+j=k0
+
+=
+
+!p
+
+exp −
+
+k−1
+X
+
+!
+
+γi δj
+
+i=j
+
+Z tk
+
+(tk − s)p e−(tk −s) δ(s) ds + ekk0 ,
+
+k
+X
+
+γj2
+
+tk0
+
+where
+|ekk0 | ≤ c
+
+k−1
+X
+i=j
+
+j=k0
+
+γi
+
+!p
+
+exp −
+
+k−1
+X
+
+!
+
+γi δj
+
+i=j
+
+for some constant c > 0. Therefore, for k0 sufficiently large, we have
+lim
+k
+
+k
+X
+
+j=k0
+
+γj
+
+k−1
+X
+i=j
+
+γi
+
+!p
+
+exp −
+
+k−1
+X
+i=j
+
+!
+
+γi δj
+
+limt 0t δ(s)(t − s)p e−(t−s) ds
+≤
+.
+1 − c supk≥k0 γk
+R
+
+CONVERGENCE RATE OF LINEAR TWO-TIME-SCALE SA
+
+23
+
+To calculate the above limit, note that
+lim
+t
+
+Z t
+0
+
+(t − s)p e−(t−s) δ(s) ds
+
+= lim
+
+Z t
+
+≤ lim
+
+
+
+t
+
+t
+
+0
+
+sp e−s δ(t − s) ds
+Z T
+
+sup |δ(s)|
+
+s≥t−T
+
+= sup |δ(s)|
+s
+
+Z ∞
+
+p −s
+
+s e
+
+0
+
+ds + sup |δ(s)|
+s
+
+Z ∞
+
+sp e−s ds
+
+T
+
+sp e−s ds.
+
+T
+
+Since T is arbitrary, the above limit is zero. Finally, note that the limit
+in (A.3) does not depend on the starting limit of the summation. 
+Lemma A.4.
+j ≥ 0,
+
+For each p ≥ 0, there exists Kp > 0 such that for any k ≥
+k
+X
+
+γi
+
+i=j
+
+i−1
+X
+l=j
+
+γl
+
+!p
+
+exp −
+
+i−1
+X
+
+!
+
+γl ≤ Kp .
+
+l=j
+
+Proof. For all j sufficiently large, we have
+k
+X
+
+γi
+
+i=j
+
+i−1
+X
+l=j
+
+γl
+
+!p
+
+exp −
+
+i−1
+X
+l=j
+
+!
+
+γl ≤
+
+R (tk −tj )
+
+τ p e−τ dτ
+,
+1 − c supl≥j γl
+
+0
+
+for some c ≥ 0. 
+REFERENCES
+Baras, J. S. and Borkar, V. S. (2000). A learning algorithm for Markov decision processes with adaptive state aggregation. In Proc. 39th IEEE Conference on Decision and
+Control. IEEE, New York. MR1757182
+Benveniste, A., Metivier, M. and Priouret, P. (1990). Adaptive Algorithms and
+Stochastic Approximations. Springer, Berlin. MR1082341
+Bhatnagar, S., Fu, M. C., Marcus, S. I. and Bhatnagar, S. (2001). Two timescale
+algorithms for simulation optimization of hidden Markov models. IIE Transactions 3
+245–258. MR1801505
+Bhatnagar, S., Fu, M. C., Marcus, S. I. and Fard, P. J. (2001). Optimal structured feedback policies for ABR flow control using two timescale SPSA. IEEE/ACM
+Transactions on Networking 9 479–491.
+Borkar, V. S. (1997). Stochastic approximation with two time scales. Systems Control
+Lett. 29 291–294. MR1432654
+Duflo, M. (1997). Random Iterative Models. Springer, Berlin. MR1485774
+Kokotovic, P. V. (1984). Applications of singular perturbation techniques to control
+problems. SIAM Rev. 26 501–550. MR765671
+
+24
+
+V. R. KONDA AND J. N. TSITSIKLIS
+
+Konda, V. R. (2002). Actor-critic algorithms. Ph.D. dissertation, Dept. Electrical Engineering and Computer Science, MIT.
+Konda, V. R. and Borkar, V. S. (1999). Actor-critic like learning algorithms for Markov
+decision processes. SIAM J. Control Optim. 38 94–123. MR1740605
+Konda, V. R. and Tsitsiklis, J. N. (2003). On actor-critic algorithms. SIAM J. Control
+Optim. 42 1143–1166.
+Kushner, H. J. and Clark, D. S. (1978). Stochastic Approximation for Constrained and
+Unconstrained Systems. Springer, New York. MR499560
+Kushner, H. J. and Yang, J. (1993). Stochastic approximation with averaging of the iterates: Optimal asymptotic rates of convergence for general processes. SIAM J. Control
+Optim. 31 1045–1062. MR1227546
+Kushner, H. J. and Yin, G. G. (1997). Stochastic Approximation Algorithms and Applications. Springer, New York. MR1453116
+Nevel’son, M. B. and Has’minskii, R. Z. (1973). Stochastic Approximation and Recursive Estimation. Amer. Math. Soc., Providence, RI. MR423714
+Polyak, B. T. (1976). Convergence and convergence rate of iterative stochastic algorithms
+I. Automat. Remote Control 12 1858–1868. MR462747
+Polyak, B. T. (1990). New method of stochastic approximation type. Automat. Remote
+Control 51 937–946. MR1071220
+Polyak, B. T. and Juditsky, A. B. (1992). Acceleration of stochastic approximation by
+averaging. SIAM J. Control Optim. 30 838–855. MR1167814
+Ruppert, D. (1988). Efficient estimators from a slowly convergent Robbins–Monro procedure. Technical Report 781, School of Operations Research and Industrial Engineering,
+Cornell Univ.
+Laboratory for Information
+and Decision Systems
+Massachusetts Institute of Technology
+77 Massachusetts Avenue
+Cambridge, Massachusetts 02139
+USA
+e-mail: konda@alum.mit.edu
+e-mail: jnt@mit.edu
+
+

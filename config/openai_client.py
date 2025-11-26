@@ -7,6 +7,7 @@ load_dotenv()
 
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
+    timeout=3000,
 )
 
 DEFAULT_MODEL = "gpt-5.1"  # 主力推理模型

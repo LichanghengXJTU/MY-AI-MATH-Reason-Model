@@ -1,0 +1,39 @@
+[
+    {
+      "id": 1,
+      "file_txt": "data/papers_raw/Loss Dynamics of Temporal Difference Reinforcement Learning.tex",
+      "title": "Loss Dynamics of Temporal Difference Reinforcement Learning",
+      "tags": ["Pehlevan", "TD", "DMFT", "on-policy", "linear function approximation"]
+    },
+    {
+      "id": 2,
+      "file_txt": "data/papers_raw/Deep Reinforcement Learning and the Deadly Triad.tex",
+      "title": "Deep Reinforcement Learning and the Deadly Triad",
+      "tags": ["deadly triad", "off-policy", "bootstrapping", "function approximation"]
+    },
+    {
+      "id": 3,
+      "file_txt": "data/papers_raw/The RL Perceptron  Generalisation Dynamics of Policy Learning in High Dimensions.tex",
+      "title": "The RL Perceptron: Generalisation Dynamics of Policy Learning in High Dimensions",
+      "tags": ["RL Perceptron", "generalisation dynamics", "high-dimensional", "policy learning"]
+    },
+    {
+      "id": 4,
+      "file_txt": "data/papers_raw/Asynchronous Methods for Deep Reinforcement Learning.tex",
+      "title": "Asynchronous Methods for Deep Reinforcement Learning",
+      "tags": ["A3C", "asynchronous", "deep RL", "actor-critic"]
+    },
+    {
+      "id": 5,
+      "file_txt": "data/papers_raw/Actor Critic Algorithms.txt",
+      "title": "Actor-Critic Algorithms",
+      "tags": ["actor-critic", "two-time-scale", "TD critic", "policy gradient"]
+    },
+    {
+      "id": 6,
+      "file_txt": "data/papers_raw/Linear2scalestapprox.txt",
+      "title": "Convergence Rate of Linear Two-Time-Scale Stochastic Approximation",
+      "tags": ["two-time-scale", "stochastic approximation", "asymptotic covariance", "Konda-Tsitsiklis"]
+    }
+  ]
+  

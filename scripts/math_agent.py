@@ -1,11 +1,17 @@
 # scripts/math_agent.py
 import json
+import sys
 from pathlib import Path
 from datetime import datetime
 
+# 把项目根目录加入 sys.path，方便从 scripts/ 看到 config/
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from config.openai_client import client, DEFAULT_MODEL
 
-ROOT = Path(__file__).resolve().parents[1]
+
 DATA = ROOT / "data"
 WS = ROOT / "workspace" / "projects"
 
@@ -98,7 +104,7 @@ def ask_math(
     project: str,
     question: str,
     paper_ids: list[int],
-    max_output_tokens: int = 20000,
+    max_output_tokens: int = 40000,
 ):
     system_prompt = load_math_system_prompt()
     memory = load_project_memory(project)
@@ -230,5 +236,5 @@ if __name__ == "__main__":
         "0.md",
         paper_ids
     )
-    print(ans[:100000])
+    print(ans[:2000])
 

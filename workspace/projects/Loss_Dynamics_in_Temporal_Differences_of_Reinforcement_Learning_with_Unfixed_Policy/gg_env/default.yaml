@@ -1,0 +1,22 @@
+agent:
+    name: "Agent"
+    ghost_policy: Chaser
+    transition: [0.7, 0.1, 0.1, 0.1]
+
+camera:
+    scale: -0.15
+
+goblets:
+    number: 5
+    max_reward: 10
+
+world_generation:
+    world_width: 100.0
+    world_height: 100.0
+    num_obstacles: 10
+    obstacle_radius_cells: 3
+    cell_size: 5.0
+
+render_delay_secs: 0.5
+generation_seed: 33387
+debug: true
